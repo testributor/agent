@@ -14,7 +14,7 @@ type Manager struct {
 	jobsChannel                           chan *TestJob
 	newJobsChannel                        chan []TestJob // TODO: Make this a pointer to slice?
 	jobs                                  []TestJob
-	workerCurrentJobCostPredictionSeconds int
+	workerCurrentJobCostPredictionSeconds float64
 	workerCurrentJobStartedAt             time.Time
 	logger                                Logger
 	client                                *APIClient
@@ -45,9 +45,9 @@ func (m *Manager) FetchJobs() {
 	m.newJobsChannel <- jobs
 }
 
-func (m *Manager) workloadOnWorkerSeconds() int {
+func (m *Manager) workloadOnWorkerSeconds() float64 {
 	secondsLeft :=
-		m.workerCurrentJobCostPredictionSeconds - int(time.Since(m.workerCurrentJobStartedAt))
+		m.workerCurrentJobCostPredictionSeconds - float64(time.Since(m.workerCurrentJobStartedAt))
 
 	if secondsLeft < 0 {
 		return 0
@@ -56,8 +56,8 @@ func (m *Manager) workloadOnWorkerSeconds() int {
 	}
 }
 
-func (m *Manager) TotalWorkloadInQueueSeconds() int {
-	totalWorkload := 0
+func (m *Manager) TotalWorkloadInQueueSeconds() float64 {
+	totalWorkload := float64(0)
 	for _, job := range m.jobs {
 		totalWorkload += job.costPredictionSeconds
 	}

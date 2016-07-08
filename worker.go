@@ -30,6 +30,6 @@ func (w *Worker) Start() {
 	for {
 		nextJob = <-w.jobsChannel
 		// Run the job
-		w.logger.Log("Cost prediction: " + strconv.Itoa(nextJob.costPredictionSeconds))
+		w.logger.Log("Cost prediction: " + strconv.FormatFloat(nextJob.costPredictionSeconds, 'f', 2, 64))
 	}
 }

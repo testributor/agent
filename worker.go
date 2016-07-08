@@ -27,6 +27,7 @@ func NewWorker(jobsChannel chan *TestJob, reportsChannel chan *TestJob) *Worker 
 
 func (w *Worker) Start() {
 	var nextJob *TestJob
+	w.logger.Log("Entering Worker loop")
 	for {
 		nextJob = <-w.jobsChannel
 		// Run the job

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"strconv"
 	"time"
 )
@@ -10,12 +11,25 @@ const (
 )
 
 type Manager struct {
-	newJobsChannel                        chan []TestJob // TODO: Make this a pointer to slice?
 	jobsChannel                           chan *TestJob
+	newJobsChannel                        chan []TestJob // TODO: Make this a pointer to slice?
 	jobs                                  []TestJob
 	workerCurrentJobCostPredictionSeconds int
 	workerCurrentJobStartedAt             time.Time
 	logger                                Logger
+	client                                *APIClient
+}
+
+// NewManager should be used to create a Manager instances. It ensures the correct
+// initialization of all fields.
+func NewManager(jobsChannel chan *TestJob) *Manager {
+	logger := Logger{"Manager", os.Stdout}
+	return &Manager{
+		jobsChannel:    jobsChannel,
+		newJobsChannel: make(chan []TestJob),
+		logger:         logger,
+		client:         NewClient(logger),
+	}
 }
 
 // FetchJobs makes a call to Testributor api and fetches the next batch of jobs,

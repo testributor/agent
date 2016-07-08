@@ -10,6 +10,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
+)
+
+const (
+	REQUEST_ERROR_TIMEOUT_SECONDS = 10
 )
 
 var testributorUrl = os.Getenv("TESTRIBUTOR_URL")
@@ -52,14 +58,18 @@ func SetupClientData() {
 	tokenSource = conf.TokenSource(context.Background())
 }
 
-func NewClient() *APIClient {
-	return &APIClient{
-		*oauth2.NewClient(context.Background(), tokenSource),
-	}
-}
-
 type APIClient struct {
 	http.Client
+	logger Logger
+}
+
+// NewClient should be used to create an APIClient instance. A logger is required
+// in order for the client to print the messages with the correct prefix.
+func NewClient(logger Logger) *APIClient {
+	return &APIClient{
+		*oauth2.NewClient(context.Background(), tokenSource),
+		logger,
+	}
 }
 
 // HandleRequest takes an *http.Request, makes the request and returns the
@@ -71,9 +81,15 @@ func (c *APIClient) PerformRequest(method string, path string) (interface{}, err
 		return nil, err
 	}
 
+	requestStart := time.Now()
 	resp, err := c.Do(request)
+	requestDuration := time.Since(requestStart).String()
 	if err != nil {
-		return nil, err
+		c.logger.Log("Error occured: " + err.Error())
+		c.logger.Log("Error occured after " + requestDuration)
+		c.logger.Log("Retrying in " + strconv.Itoa(REQUEST_ERROR_TIMEOUT_SECONDS) + " seconds")
+		time.Sleep(REQUEST_ERROR_TIMEOUT_SECONDS * time.Second)
+		return c.PerformRequest(method, path)
 	}
 
 	if resp.StatusCode == 401 {

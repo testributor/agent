@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestPopJobWhenNonEmpty(t *testing.T) {
+func TestAssignJobToWorkerWhenNonEmpty(t *testing.T) {
 	manager := Manager{}
 	expectedJob := TestJob{4}
 	manager.jobs = []TestJob{
@@ -14,23 +14,34 @@ func TestPopJobWhenNonEmpty(t *testing.T) {
 		TestJob{3},
 	}
 
-	job, err := manager.PopJob()
-	if job != expectedJob {
-		t.Error("Does not pop the last TestJob")
+	oldJobs := len(manager.jobs)
+	assigned := manager.AssignJobToWorker()
+	if !assigned {
+		t.Error("It should return true")
 	}
 
-	if err != nil {
-		t.Error("Should not return error")
+	if len(manager.jobs) != oldJobs-1 {
+		t.Error("Should pop a job from the queue")
+	}
+
+	if manager.workerCurrentJobCostPredictionSeconds !=
+		expectedJob.costPredictionSeconds {
+		t.Error("Should pop the first job in queue")
 	}
 }
 
-func TestPopJobWhenEmpty(t *testing.T) {
+func TestAssignJobToWorkerWhenEmpty(t *testing.T) {
 	manager := Manager{}
 	manager.jobs = []TestJob{}
 
-	_, err := manager.PopJob()
-	if err.Error() != "No jobs left" {
-		t.Error("Should return error 'No jobs left', but got: ", err.Error())
+	oldJobs := len(manager.jobs)
+	assigned := manager.AssignJobToWorker()
+	if assigned {
+		t.Error("Should return false")
+	}
+
+	if oldJobs != 0 || len(manager.jobs) != 0 {
+		t.Error("jobs queue should be empty")
 	}
 }
 

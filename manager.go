@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"strconv"
 	"time"
 )
@@ -11,7 +10,7 @@ const (
 )
 
 type Manager struct {
-	newJobsChannel                        chan []TestJob
+	newJobsChannel                        chan []TestJob // TODO: Make this a pointer to slice?
 	jobsChannel                           chan *TestJob
 	jobs                                  []TestJob
 	workerCurrentJobCostPredictionSeconds int
@@ -60,15 +59,26 @@ func (m *Manager) LowWorkload() bool {
 	return m.TotalWorkloadInQueueSeconds() <= MIN_WORKLOAD_SECONDS
 }
 
-func (m *Manager) PopJob() (TestJob, error) {
+// AssignJobToWorker removes the first job from the queue and writes the
+// workerCurrentJobCostPredictionSeconds and workerCurrentJobStartedAt
+// attributes.
+func (m *Manager) AssignJobToWorker() bool {
 	if length := len(m.jobs); length > 0 {
-		nextJob := m.jobs[0]
-		// TODO: Investigate if we have to use "copy" to make the underlying array smalller
-		m.jobs = m.jobs[1:]
+		jobToBeAssigned := m.jobs[0]
+		m.workerCurrentJobCostPredictionSeconds = jobToBeAssigned.costPredictionSeconds
+		m.workerCurrentJobStartedAt = time.Now()
 
-		return nextJob, nil
+		// NOTE: copy to a new slice to avoid growing the underlying array indefinitely
+		// This will create garbage to be collected (the old m.jobs slice)
+		// so we might want to do it less frequently (for example every 100
+		// assignments or something)
+		newJobsList := make([]TestJob, len(m.jobs)-1)
+		copy(newJobsList, m.jobs[1:])
+		m.jobs = newJobsList
+
+		return true
 	} else {
-		return TestJob{}, errors.New("No jobs left")
+		return false
 	}
 }
 
@@ -84,8 +94,7 @@ func (m *Manager) ParseChannels() {
 			// Write the new jobs in the jobs list
 			m.jobs = append(m.jobs, newJobs...)
 		case m.jobsChannel <- &m.jobs[0]:
-			// TODO: Replace this with something that writes to the current job on worker thingy
-			m.PopJob()
+			m.AssignJobToWorker()
 
 			// Send a job to the worker and remove it from the list
 			if m.LowWorkload() {

@@ -106,7 +106,6 @@ func (m *Manager) ParseChannels() {
 		// new jobs are sent to the newJobsChannel.
 		newJobs = <-m.newJobsChannel
 		m.jobs = append(m.jobs, newJobs...)
-		// Write the new jobs in the jobs list
 	}
 }
 

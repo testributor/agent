@@ -27,7 +27,7 @@ var appSecret = os.Getenv("APP_SECRET")
 // since it points to an already initialized TokenSource value (with a valid token).
 var tokenSource oauth2.TokenSource
 
-func init() {
+func SetupClientData() {
 	// Default url if environment var is not set
 	if testributorUrl == "" {
 		testributorUrl = "https://www.testributor.com/"

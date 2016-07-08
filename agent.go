@@ -3,6 +3,9 @@ package main
 import "os"
 
 func main() {
+	// Check if env vars are set, use defaults if not (or exit if needed)
+	// and initialize oauth token.
+	SetupClientData()
 	newJobsChannel := make(chan []TestJob)
 	jobsChannel := make(chan *TestJob)
 	reportsChannel := make(chan *TestJob)

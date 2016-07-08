@@ -76,14 +76,17 @@ func (m *Manager) PopJob() (TestJob, error) {
 // worker.
 func (m *Manager) ParseChannels() {
 	var newJobs []TestJob
-	nextJob, err := m.PopJob()
 
-	if err == nil {
+	if len(m.jobs) > 0 {
 		// TODO: we also need to monitor for cancelled jobs
 		select {
 		case newJobs = <-m.newJobsChannel:
 			// Write the new jobs in the jobs list
-		case m.jobsChannel <- &nextJob:
+			m.jobs = append(m.jobs, newJobs...)
+		case m.jobsChannel <- &m.jobs[0]:
+			// TODO: Replace this with something that writes to the current job on worker thingy
+			m.PopJob()
+
 			// Send a job to the worker and remove it from the list
 			if m.LowWorkload() {
 				go m.FetchJobs()

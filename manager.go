@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	MIN_WORKLOAD_SECONDS = 10
+	MIN_WORKLOAD_SECONDS                   = 10
+	NO_JOBS_ON_TESTRIBUTOR_TIMEOUT_SECONDS = 5
 )
 
 type Manager struct {
@@ -36,13 +37,23 @@ func NewManager(jobsChannel chan *TestJob) *Manager {
 // only if the jobs list is running low on workload.
 // When finished, it writes the jobs to the newJobsChannel.
 func (m *Manager) FetchJobs() {
-	jobs := []TestJob{
-		TestJob{10},
-		TestJob{2},
+	result, err := m.client.FetchJobs()
+	if err != nil {
+		panic("Tried to fetch some jobs but there was an error: " + err.Error())
+	}
+	var jobs = make([]TestJob, 0, 10)
+	for _, job := range result.([]interface{}) {
+		jobs = append(jobs, TestJobNew(job.(map[string]interface{})))
 	}
 
-	m.logger.Log("Fetched " + strconv.Itoa(len(jobs)) + " jobs")
-	m.newJobsChannel <- jobs
+	if len(jobs) > 0 {
+		m.logger.Log("Fetched " + strconv.Itoa(len(jobs)) + " jobs")
+		m.newJobsChannel <- jobs
+	} else {
+		// TODO: Use exponential backoff here (or something like that)
+		time.Sleep(NO_JOBS_ON_TESTRIBUTOR_TIMEOUT_SECONDS * time.Second)
+		m.FetchJobs()
+	}
 }
 
 func (m *Manager) workloadOnWorkerSeconds() float64 {

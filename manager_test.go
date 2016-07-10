@@ -2,16 +2,18 @@ package main
 
 import (
 	"testing"
+	"time"
 )
 
 func TestAssignJobToWorkerWhenNonEmpty(t *testing.T) {
 	manager := Manager{}
-	expectedJob := TestJob{4}
+	expectedJob := TestJob{1, 4, 100, time.Now()}
+
 	manager.jobs = []TestJob{
 		expectedJob,
-		TestJob{1},
-		TestJob{2},
-		TestJob{3},
+		TestJob{2, 1, 100, time.Now()},
+		TestJob{3, 2, 100, time.Now()},
+		TestJob{4, 3, 100, time.Now()},
 	}
 
 	oldJobs := len(manager.jobs)
@@ -49,9 +51,9 @@ func TestTotalWorkloadInQueueSeconds(t *testing.T) {
 	manager := Manager{
 		workerCurrentJobCostPredictionSeconds: 1,
 		jobs: []TestJob{
-			TestJob{2},
-			TestJob{10},
-			TestJob{100},
+			TestJob{2, 2, 100, time.Now()},
+			TestJob{3, 10, 100, time.Now()},
+			TestJob{4, 100, 100, time.Now()},
 		},
 	}
 
@@ -66,9 +68,9 @@ func TestLowWorkload(t *testing.T) {
 	manager := Manager{
 		workerCurrentJobCostPredictionSeconds: 1,
 		jobs: []TestJob{
-			TestJob{1},
-			TestJob{2},
-			TestJob{3},
+			TestJob{2, 1, 2, time.Now()},
+			TestJob{3, 2, 10, time.Now()},
+			TestJob{4, 3, 100, time.Now()},
 		},
 	}
 
@@ -102,8 +104,9 @@ func TestParseChannelsWhenJobsExists(t *testing.T) {
 
 	manager := Manager{
 		jobs: []TestJob{
-			TestJob{1},
-			TestJob{2},
+			// Keep the cost predicton big enough to avoid a call to FetchJobs
+			TestJob{2, 100, 2, time.Now()},
+			TestJob{3, 200, 10, time.Now()},
 		},
 		jobsChannel:    jobsChannel,
 		newJobsChannel: newJobsChannel,

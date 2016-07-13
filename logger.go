@@ -12,7 +12,7 @@ type Logger struct {
 }
 
 // Write is implemented as part of the io.Writer interface
-func (l *Logger) Write(p []byte) (n int, err error) {
+func (l Logger) Write(p []byte) (n int, err error) {
 	now := time.Now().UTC()
 	short_uuid := "UUID_GOES_HERE" // TODO make this dynamic
 	// TODO: ljust
@@ -29,6 +29,6 @@ func (l *Logger) Write(p []byte) (n int, err error) {
 
 // This should be used to write strings instead for byte arrays (which is what
 // Write methods expects)
-func (l *Logger) Log(message string) {
+func (l Logger) Log(message string) {
 	l.Write([]byte(message))
 }

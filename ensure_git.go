@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"regexp"
@@ -25,16 +24,22 @@ func EnsureGit(logger Logger) error {
 
 	switch runtime.GOOS {
 	case "windows":
-		fmt.Println("Hello from Windows")
-		return nil
+		return WindowsInstallGit(logger)
 	case "linux":
 		return LinuxInstallGit(logger)
 	case "darwin":
-		fmt.Println("Hello from Mac")
-		return nil
+		return MacInstallGit(logger)
 	}
 
 	return nil
+}
+
+func WindowsInstallGit(logger Logger) error {
+	return errors.New("I don't know how to install Git on Windows. Please install it manually and run the agent again.")
+}
+
+func MacInstallGit(logger Logger) error {
+	return errors.New("I don't know how to install Git on Mac. Please install it manually and run the agent again.")
 }
 
 // This function assumes we are on a linux system and tries to find the distro

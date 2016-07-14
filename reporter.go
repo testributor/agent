@@ -20,5 +20,5 @@ func NewReporter(reportsChannel chan *TestJob) *Reporter {
 }
 
 func (r *Reporter) Start() {
-	r.logger.Log("Entering Reporter loop")
+	r.logger.Log("Entering loop")
 }

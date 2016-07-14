@@ -139,7 +139,7 @@ func (m *Manager) ParseChannels() {
 func (m *Manager) Start() {
 	go m.FetchJobs()
 
-	m.logger.Log("Entering Manager loop")
+	m.logger.Log("Entering loop")
 	for {
 		m.ParseChannels()
 	}

@@ -18,7 +18,7 @@ func TestSystemCommandWhenCommandReturnsAnError(t *testing.T) {
 }
 
 func TestSystemCommandWhenCommandExists(t *testing.T) {
-	// NOTE: This makes and external call to GitHub. If we can find an other
+	// TODO: This makes and external call to GitHub. If we can find an other
 	// command that will be available on any system and has predictable output
 	// we should better change this.
 	result, err := SystemCommand([]string{"git", "ls-remote"}, ioutil.Discard)

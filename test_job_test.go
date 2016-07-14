@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-var APIresponse []byte = []byte(`
+var FetchJobsAPIResponse []byte = []byte(`
 [{
   "command":"bin/rails runner -e test '$LOAD_PATH.push(\"#{Rails.root}/test\"); require \"test/controllers/dashboard_controller_test.rb\".gsub(/^test\\//,\"\")'",
   "created_at":"2016-07-09T09:03:05.717Z",
@@ -20,17 +20,15 @@ var APIresponse []byte = []byte(`
 }]
 `)
 
-var builder TestJobBuilder
-
-func prepareBuilder() {
+func prepareTestJobBuilder() TestJobBuilder {
 	var parsedResponse interface{}
-	_ = json.Unmarshal(APIresponse, &parsedResponse)
+	_ = json.Unmarshal(FetchJobsAPIResponse, &parsedResponse)
 
-	builder = TestJobBuilder(parsedResponse.([]interface{})[0].(map[string]interface{}))
+	return TestJobBuilder(parsedResponse.([]interface{})[0].(map[string]interface{}))
 }
 
 func TestBuilderId(t *testing.T) {
-	prepareBuilder()
+	builder := prepareTestJobBuilder()
 
 	if builder.id() != 109136 {
 		t.Error("It should return the correct id (109136) but got: ", builder.id())
@@ -40,7 +38,7 @@ func TestBuilderId(t *testing.T) {
 // http://stackoverflow.com/a/522281/974285
 // http://stackoverflow.com/a/34422459/974285
 func TestBuilderCreatedAt(t *testing.T) {
-	prepareBuilder()
+	builder := prepareTestJobBuilder()
 
 	parsedTime, _ := time.Parse(time.RFC3339, "2016-07-09T09:03:05.717Z")
 	if builder.createdAt() != parsedTime {
@@ -49,7 +47,7 @@ func TestBuilderCreatedAt(t *testing.T) {
 }
 
 func TestBuilderSentAtSecondsSinceEpoch(t *testing.T) {
-	prepareBuilder()
+	builder := prepareTestJobBuilder()
 
 	if builder.sentAtSecondsSinceEpoch() != 1468054988 {
 		t.Error("It should return 1468054988 but got: ", builder.sentAtSecondsSinceEpoch())
@@ -57,7 +55,7 @@ func TestBuilderSentAtSecondsSinceEpoch(t *testing.T) {
 }
 
 func TestBuilderCostPredicitonSeconds(t *testing.T) {
-	prepareBuilder()
+	builder := prepareTestJobBuilder()
 
 	if builder.costPredictionSeconds() != 1.824951 {
 		t.Error("It should return 1.824951 but got: ", builder.costPredictionSeconds())

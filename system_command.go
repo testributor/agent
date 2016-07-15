@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -23,6 +24,8 @@ type CommandResult struct {
 	resultType      int
 	success         bool
 	durationSeconds float64
+	commandErr      error
+	exitCode        int
 }
 
 // SystemCommand is used to run system commands. It returns a CommandResult
@@ -78,6 +81,20 @@ func SystemCommand(command []string, logger io.Writer) (CommandResult, error) {
 
 	waitResult := cmd.Wait()
 
+	// http://stackoverflow.com/a/10385867/974285
+	var exitCode int
+	if exiterr, ok := waitResult.(*exec.ExitError); ok {
+		// The program has exited with an exit code != 0
+
+		// This works on both Unix and Windows. Although package
+		// syscall is generally platform dependent, WaitStatus is
+		// defined for both Unix and Windows and in both cases has
+		// an ExitStatus() method with the same signature.
+		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+			exitCode = status.ExitStatus()
+		}
+	}
+
 	var resultType int
 	switch {
 	case waitResult == nil:
@@ -94,6 +111,8 @@ func SystemCommand(command []string, logger io.Writer) (CommandResult, error) {
 		combinedOutput:  combined,
 		resultType:      resultType,
 		success:         (waitResult == nil),
+		commandErr:      waitResult,
+		exitCode:        exitCode,
 		durationSeconds: time.Since(commandStart).Seconds(),
 	}, nil
 }

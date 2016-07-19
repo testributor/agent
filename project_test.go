@@ -24,7 +24,7 @@ var ProjectSetupDataAPIResponse []byte = []byte(`
 			},
 			{ "id":11,
 				"path":"testributor.yml",
-				"contents":"each:\r\n  pattern: 'test\\/.*_test.rb$'\r\n  command: bin/rails runner -e test '$LOAD_PATH.push(\"#{Rails.root}/test\"); require \"%{file}\".gsub(/^test\\//,\"\")'\r\n"
+				"contents":"before: \"/bin/bash my_worker_init_script\"\r\neach:\r\n  pattern: 'test\\/.*_test.rb$'\r\n  command: bin/rails runner -e test '$LOAD_PATH.push(\"#{Rails.root}/test\"); require \"%{file}\".gsub(/^test\\//,\"\")'\r\n"
 			}],
 		"docker_image":{"name":"ruby","version":"2.3.0"}
 	},

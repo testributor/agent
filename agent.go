@@ -21,6 +21,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	project, err := NewProject(logger)
+	if err != nil {
+		logger.Log(err.Error())
+		os.Exit(1)
+	}
+
+	err = project.Init(logger)
+	if err != nil {
+		logger.Log(err.Error())
+		os.Exit(1)
+	}
+
 	jobsChannel := make(chan *TestJob)
 	reportsChannel := make(chan *TestJob)
 

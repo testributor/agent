@@ -1,13 +1,20 @@
 package main
 
-import "time"
-import "strconv"
+import (
+	"github.com/ispyropoulos/agent/system_command"
+	"strconv"
+	"time"
+)
 
 type TestJob struct {
-	id                      int
-	costPredictionSeconds   float64
-	sentAtSecondsSinceEpoch float64
-	createdAt               time.Time
+	id                         int
+	costPredictionSeconds      float64
+	sentAtSecondsSinceEpoch    int64
+	startedAtSecondsSinceEpoch int64
+	createdAt                  time.Time
+	command                    string
+	result                     string
+	resultType                 int
 }
 
 // This is a custom type based on the type return my APIClient's FetchJobs

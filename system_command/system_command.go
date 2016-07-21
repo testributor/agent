@@ -1,10 +1,11 @@
-package main
+package system_command
 
 import (
 	"bufio"
 	"fmt"
 	"io"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -18,26 +19,27 @@ var RESULT_TYPES = map[string]int{
 }
 
 type CommandResult struct {
-	output          string
-	errors          string
-	combinedOutput  string
-	resultType      int
-	success         bool
-	durationSeconds float64
-	commandErr      error
-	exitCode        int
+	Output          string
+	Errors          string
+	CombinedOutput  string
+	ResultType      int
+	Success         bool
+	DurationSeconds float64
+	CommandErr      error
+	ExitCode        int
 }
 
-// SystemCommand is used to run system commands. It returns a CommandResult
+// Run is used to run system commands. It returns a CommandResult
 // struct which holds the stdout, stderr and combined output along with the
 // duration, result type (failed, error, success) for testing commands and
 // whether the command's exit code was success or not.
 // The logger can be any io.Writer but the usual suspects are our Logger
 // struct (which formats the output) and ioutil.Discard when we don't want to
 // print the output.
-func SystemCommand(command []string, logger io.Writer) (CommandResult, error) {
+func Run(command string, logger io.Writer) (CommandResult, error) {
 	commandStart := time.Now()
-	cmd := exec.Command(command[0], command[1:]...)
+	cmd := GenerateCommandForCurrentOS(command)
+
 	errPipe, err := cmd.StderrPipe()
 	if err != nil {
 		return CommandResult{}, err
@@ -54,6 +56,21 @@ func SystemCommand(command []string, logger io.Writer) (CommandResult, error) {
 	outputDone := make(chan bool)
 	combinedOutputChannel := make(chan string)
 
+	startErr := cmd.Start()
+	if startErr != nil {
+		logger.Write(([]byte)(startErr.Error()))
+		return CommandResult{
+			Output:          "",
+			Errors:          startErr.Error(),
+			CombinedOutput:  startErr.Error(),
+			ResultType:      RESULT_TYPES["error"],
+			Success:         false,
+			CommandErr:      startErr,
+			ExitCode:        1,
+			DurationSeconds: 0,
+		}, startErr
+	}
+
 	// Capture the combined output too
 	go func(result *string) {
 		for {
@@ -68,15 +85,19 @@ func SystemCommand(command []string, logger io.Writer) (CommandResult, error) {
 	go ReadUntilEOF(outPipe, &output, outputDone, combinedOutputChannel, logger)
 	go ReadUntilEOF(errPipe, &errors, errorsDone, combinedOutputChannel, logger)
 
-	startErr := cmd.Start()
-	if startErr != nil {
-		return CommandResult{}, startErr
-	}
-
 	// Wait until reading is done before calling Wait()
 	// https://golang.org/pkg/os/exec/#Cmd.StdoutPipe
+	/*
+		select {
+		case <-outputDone:
+			<-errorsDone
+		case <-errorsDone:
+			<-outputDone
+		}
+	*/
 	_ = <-outputDone
 	_ = <-errorsDone
+
 	close(combinedOutputChannel) // Nothing more to read. Let the reading go routine exit.
 
 	waitResult := cmd.Wait()
@@ -106,14 +127,14 @@ func SystemCommand(command []string, logger io.Writer) (CommandResult, error) {
 	}
 
 	return CommandResult{
-		output:          output,
-		errors:          errors,
-		combinedOutput:  combined,
-		resultType:      resultType,
-		success:         (waitResult == nil),
-		commandErr:      waitResult,
-		exitCode:        exitCode,
-		durationSeconds: time.Since(commandStart).Seconds(),
+		Output:          output,
+		Errors:          errors,
+		CombinedOutput:  combined,
+		ResultType:      resultType,
+		Success:         (waitResult == nil),
+		CommandErr:      waitResult,
+		ExitCode:        exitCode,
+		DurationSeconds: time.Since(commandStart).Seconds(),
 	}, nil
 }
 
@@ -134,4 +155,17 @@ func ReadUntilEOF(stream io.Reader, outVar *string, doneChannel chan bool, combi
 	}
 
 	doneChannel <- true
+}
+
+func GenerateCommandForCurrentOS(command string) *exec.Cmd {
+	switch runtime.GOOS {
+	case "windows":
+		return WindowsShellCommand(command)
+	case "linux":
+		return PosixShellCommand(command)
+	case "darwin":
+		return PosixShellCommand(command)
+	default:
+		panic("Don't know how to run shell commands on your OS!")
+	}
 }

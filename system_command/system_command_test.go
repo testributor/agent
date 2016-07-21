@@ -1,4 +1,4 @@
-package main
+package system_command
 
 import (
 	"io/ioutil"

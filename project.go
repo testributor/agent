@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/ispyropoulos/agent/system_command"
 	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"os"
@@ -189,7 +190,7 @@ func (project *Project) WriteSshFiles(logger Logger) error {
 	// If a smaller version is used, it won't use the SSH keys and will fail.
 	// Consider adding a version check on EnsureGit function (should work for all
 	// OSes)
-	err = os.Setenv("GIT_SSH_COMMAND", strings.Join(project.SshCommand(), " "))
+	err = os.Setenv("GIT_SSH_COMMAND", project.SshCommand())
 	if err != nil {
 		return err
 	}
@@ -203,7 +204,7 @@ func (project *Project) WriteSshFiles(logger Logger) error {
 //   ssh -i /home/dimitris/.ssh/testributor_id_rsa -F /dev/null -o UserKnownHostsFile=/dev/null  -o StrictHostKeyChecking=no -T git@github.com
 // For this reason we create our own config file and skip the UserKnownHostsFile
 // option.
-func (project *Project) SshCommand() []string {
+func (project *Project) SshCommand() string {
 	// Ignore the error, if it was to fail, it would have already done so on a
 	// previous use.
 	privateKey, _ := homedir.Expand("~/.ssh/" + PRIVATE_KEY_NAME)
@@ -213,24 +214,19 @@ func (project *Project) SshCommand() []string {
 	// We are sure there is a "git" command but does this mean we have ssh?
 	// On windows we might need to "construct" the ssh command using an absolute
 	// path (it should live somewhere inside Portable git directory).
-	command := []string{
-		"ssh", "-i", privateKey, "-F", configFile,
-	}
-
-	return command
+	return "ssh -i " + privateKey + " -F " + configFile
 }
 
 func (project *Project) CheckSshKeyValidity(logger Logger) error {
 	logger.Log("Checking the validity of the SSH keys")
 	remoteHost := strings.Split(project.repositorySshUrl, ":")[0]
 
-	result, err := SystemCommand(append(project.SshCommand(),
-		[]string{"-T", remoteHost}...), logger)
+	result, err := system_command.Run(project.SshCommand()+" -T "+remoteHost, logger)
 	if err != nil {
 		return err
 	}
 
-	if result.exitCode == 255 {
+	if result.ExitCode == 255 {
 		return errors.New("The SSH keys don't seem to be valid.")
 	}
 
@@ -277,25 +273,25 @@ func (project *Project) FetchProjectRepo(logger Logger) error {
 		return err
 	}
 
-	_, err = SystemCommand([]string{"git", "init"}, logger)
+	_, err = system_command.Run("git init", logger)
 	if err != nil {
 		return err
 	}
 
 	// Check if origin exists and remove in order to change it if
 	// url changed in testributor project/settings page
-	res, err := SystemCommand([]string{"git", "remote", "show"}, ioutil.Discard)
+	res, err := system_command.Run("git remote show", ioutil.Discard)
 	if err != nil {
 		return err
 	}
-	for _, remote := range strings.Split(res.output, "\n") {
+	for _, remote := range strings.Split(res.Output, "\n") {
 		matched, err := regexp.MatchString("origin", remote)
 		if err != nil {
 			return err
 		}
 
 		if matched {
-			_, err = SystemCommand([]string{"git", "remote", "rm", "origin"}, ioutil.Discard)
+			_, err = system_command.Run("git remote rm origin", ioutil.Discard)
 			if err != nil {
 				return err
 			}
@@ -305,25 +301,24 @@ func (project *Project) FetchProjectRepo(logger Logger) error {
 	}
 
 	logger.Log("Adding " + project.repositorySshUrl + " as origin")
-	res, err = SystemCommand([]string{"git", "remote", "add", "origin",
-		project.repositorySshUrl}, logger)
+	res, err = system_command.Run("git remote add origin "+project.repositorySshUrl, logger)
 	if err != nil {
 		return err
 	}
 
 	logger.Log("Fetching origin")
-	res, err = SystemCommand([]string{"git", "fetch", "origin"}, logger)
+	res, err = system_command.Run("git fetch origin", logger)
 	if err != nil {
 		return err
 	}
 
 	// An "initial" commit to checkout. This creates the local HEAD so we can
 	// hard reset to something in SetupTestEnvironment.
-	res, err = SystemCommand([]string{"git", "ls-remote", "--heads", "-q"}, ioutil.Discard)
+	res, err = system_command.Run("git ls-remote --heads -q", ioutil.Discard)
 	if err != nil {
 		return err
 	}
-	remoteHeads := strings.Split(res.output, "\n")
+	remoteHeads := strings.Split(res.Output, "\n")
 	commitToCheckout := ""
 	for _, head := range remoteHeads {
 		if fields := strings.Fields(head); len(fields) > 0 && fields[1] == "refs/heads/master" {
@@ -339,7 +334,7 @@ func (project *Project) FetchProjectRepo(logger Logger) error {
 	}
 
 	logger.Log("Checking out " + commitToCheckout + " commit.")
-	_, err = SystemCommand([]string{"git", "reset", "--hard", commitToCheckout}, logger)
+	_, err = system_command.Run("git reset --hard "+commitToCheckout, logger)
 	if err != nil {
 		return err
 	}
@@ -413,12 +408,12 @@ func (project *Project) CurrentCommitSha() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	res, err := SystemCommand([]string{"git", "rev-parse", "HEAD"}, ioutil.Discard)
+	res, err := system_command.Run("git rev-parse HEAD", ioutil.Discard)
 	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSpace(res.output), nil
+	return strings.TrimSpace(res.Output), nil
 }
 
 func (project *Project) CheckoutCommit(commitSha string) error {
@@ -428,10 +423,9 @@ func (project *Project) CheckoutCommit(commitSha string) error {
 	}
 
 	if commitSha == "" {
-		_, err = SystemCommand([]string{"git", "reset", "--hard"}, ioutil.Discard)
+		_, err = system_command.Run("git reset --hard", ioutil.Discard)
 	} else {
-		_, err = SystemCommand([]string{"git", "reset", "--hard", commitSha, "--"},
-			ioutil.Discard)
+		_, err = system_command.Run("git reset --hard "+commitSha+" --", ioutil.Discard)
 	}
 	if err != nil {
 		return err
@@ -499,7 +493,7 @@ func (project *Project) SetupTestEnvironment(commitSha string, logger Logger) er
 	}
 
 	// Cleanup any artifacts
-	_, err = SystemCommand([]string{"git", "clean", "-df"}, ioutil.Discard)
+	_, err = system_command.Run("git clean -df", ioutil.Discard)
 	if err != nil {
 		return err
 	}
@@ -519,8 +513,7 @@ func (project *Project) SetupTestEnvironment(commitSha string, logger Logger) er
 		return err
 	}
 	// TODO: This is Linux specific. Fix it as soon as we implement pipelining.
-	_, err = SystemCommand([]string{"/bin/bash",
-		TESTRIBUTOR_FUNCTIONS_COMBINED_BUILD_COMMANDS_PATH}, logger)
+	_, err = system_command.Run("/bin/bash "+TESTRIBUTOR_FUNCTIONS_COMBINED_BUILD_COMMANDS_PATH, logger)
 
 	return nil
 }

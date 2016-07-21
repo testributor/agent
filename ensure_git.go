@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/ispyropoulos/agent/system_command"
 	"io/ioutil"
 	"os/exec"
 	"regexp"
@@ -48,8 +49,7 @@ func MacInstallGit(logger Logger) error {
 // not possible (e.g. permission denied), it will simply return and error.
 // This list of commands can be useful: https://git-scm.com/download/linux
 func LinuxInstallGit(logger Logger) error {
-	distributorID, err := SystemCommand(
-		[]string{"lsb_release", "-i"}, ioutil.Discard)
+	distributorID, err := system_command.Run("lsb_release -i", ioutil.Discard)
 	if err != nil {
 		logger.Log("Could not determine the Linux distribution.")
 		logger.Log("Please install Git and run the agent again.")
@@ -63,7 +63,7 @@ func LinuxInstallGit(logger Logger) error {
 		"Arch":   InstallGitOnArch,
 	}
 	for distro, function := range distroFuncMap {
-		matched, err := regexp.MatchString(distro, distributorID.output)
+		matched, err := regexp.MatchString(distro, distributorID.Output)
 		if err != nil {
 			return err
 		}
@@ -80,8 +80,8 @@ func LinuxInstallGit(logger Logger) error {
 
 func InstallGitOnDebian(logger Logger) error {
 	logger.Log("Trying with apt-get.")
-	res, err := SystemCommand([]string{"apt-get", "install", "-y", "git"}, logger)
-	if err == nil && !res.success {
+	res, err := system_command.Run("apt-get install -y git", logger)
+	if err == nil && !res.Success {
 		// Stderr is already written no need to return it.
 		return errors.New("I wasn't able to install git. Please install it manually and run the agent again.")
 	}
@@ -91,8 +91,8 @@ func InstallGitOnDebian(logger Logger) error {
 
 func InstallGitOnArch(logger Logger) error {
 	logger.Log("Trying with pacman.")
-	res, err := SystemCommand([]string{"pacman", "-S", "--noconfirm", "git"}, logger)
-	if err == nil && !res.success {
+	res, err := system_command.Run("pacman -S --noconfirm git", logger)
+	if err == nil && !res.Success {
 		// Stderr is already written no need to return it.
 		return errors.New("I wasn't able to install git. Please install it manually and run the agent again.")
 	}

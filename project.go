@@ -15,6 +15,7 @@ const (
 	PRIVATE_KEY_NAME                                   = "testributor_id_rsa"
 	PUBLIC_KEY_NAME                                    = "testributor_id_rsa.pub"
 	SSH_CONFIG_NAME                                    = "testributor_ssh_config"
+	GIT_SSH_FILE                                       = "testributor_git_ssh.sh"
 	TESTRIBUTOR_FUNCTIONS_COMBINED_BUILD_COMMANDS_PATH = "testributor_functions.sh"
 	BUILD_COMMANDS_PATH                                = "testributor_build_commands.sh"
 )
@@ -186,11 +187,18 @@ func (project *Project) WriteSshFiles(logger Logger) error {
 	}
 	logger.Log("Wrote " + KeyFile)
 
-	// NOTE: GIT_SSH_COMMAND only works with Git > 2.3
-	// If a smaller version is used, it won't use the SSH keys and will fail.
-	// Consider adding a version check on EnsureGit function (should work for all
-	// OSes)
-	err = os.Setenv("GIT_SSH_COMMAND", project.SshCommand())
+	KeyFile, err = homedir.Expand("~/.ssh/" + GIT_SSH_FILE)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(KeyFile, []byte(project.SshCommand()+" \"$@\""), os.FileMode(0744))
+	if err != nil {
+		return err
+	}
+	logger.Log("Wrote " + KeyFile)
+
+	// https://git-scm.com/book/tr/v2/Git-Internals-Environment-Variables#Miscellaneous
+	err = os.Setenv("GIT_SSH", KeyFile)
 	if err != nil {
 		return err
 	}
@@ -207,6 +215,7 @@ func (project *Project) WriteSshFiles(logger Logger) error {
 func (project *Project) SshCommand() string {
 	// Ignore the error, if it was to fail, it would have already done so on a
 	// previous use.
+	// TODO: This does not work on Windows.
 	privateKey, _ := homedir.Expand("~/.ssh/" + PRIVATE_KEY_NAME)
 	configFile, _ := homedir.Expand("~/.ssh/" + SSH_CONFIG_NAME)
 
@@ -321,7 +330,7 @@ func (project *Project) FetchProjectRepo(logger Logger) error {
 	remoteHeads := strings.Split(res.Output, "\n")
 	commitToCheckout := ""
 	for _, head := range remoteHeads {
-		if fields := strings.Fields(head); len(fields) > 0 && fields[1] == "refs/heads/master" {
+		if fields := strings.Fields(head); len(fields) > 1 && fields[1] == "refs/heads/master" {
 			commitToCheckout = fields[0]
 			logger.Log("Found a master branch.")
 		}

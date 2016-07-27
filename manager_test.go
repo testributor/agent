@@ -7,13 +7,17 @@ import (
 
 func TestAssignJobToWorkerWhenNonEmpty(t *testing.T) {
 	manager := Manager{}
-	expectedJob := TestJob{1, 4, 100, time.Now()}
+	expectedJob := TestJob{id: 1, costPredictionSeconds: 4,
+		sentAtSecondsSinceEpoch: 100, createdAt: time.Now()}
 
 	manager.jobs = []TestJob{
 		expectedJob,
-		TestJob{2, 1, 100, time.Now()},
-		TestJob{3, 2, 100, time.Now()},
-		TestJob{4, 3, 100, time.Now()},
+		TestJob{id: 2, costPredictionSeconds: 1,
+			sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
+		TestJob{id: 3, costPredictionSeconds: 2,
+			sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
+		TestJob{id: 4, costPredictionSeconds: 3,
+			sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
 	}
 
 	oldJobs := len(manager.jobs)
@@ -51,9 +55,12 @@ func TestTotalWorkloadInQueueSeconds(t *testing.T) {
 	manager := Manager{
 		workerCurrentJobCostPredictionSeconds: 1,
 		jobs: []TestJob{
-			TestJob{2, 2, 100, time.Now()},
-			TestJob{3, 10, 100, time.Now()},
-			TestJob{4, 100, 100, time.Now()},
+			TestJob{id: 2, costPredictionSeconds: 2,
+				sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
+			TestJob{id: 3, costPredictionSeconds: 10,
+				sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
+			TestJob{id: 4, costPredictionSeconds: 100,
+				sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
 		},
 	}
 
@@ -68,9 +75,12 @@ func TestLowWorkload(t *testing.T) {
 	manager := Manager{
 		workerCurrentJobCostPredictionSeconds: 1,
 		jobs: []TestJob{
-			TestJob{2, 1, 2, time.Now()},
-			TestJob{3, 2, 10, time.Now()},
-			TestJob{4, 3, 100, time.Now()},
+			TestJob{id: 2, costPredictionSeconds: 1,
+				sentAtSecondsSinceEpoch: 2, createdAt: time.Now()},
+			TestJob{id: 3, costPredictionSeconds: 2,
+				sentAtSecondsSinceEpoch: 10, createdAt: time.Now()},
+			TestJob{id: 4, costPredictionSeconds: 3,
+				sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
 		},
 	}
 
@@ -105,8 +115,10 @@ func TestParseChannelsWhenJobsExists(t *testing.T) {
 	manager := Manager{
 		jobs: []TestJob{
 			// Keep the cost predicton big enough to avoid a call to FetchJobs
-			TestJob{2, 100, 2, time.Now()},
-			TestJob{3, 200, 10, time.Now()},
+			TestJob{id: 2, costPredictionSeconds: 100,
+				sentAtSecondsSinceEpoch: 2, createdAt: time.Now()},
+			TestJob{id: 3, costPredictionSeconds: 200,
+				sentAtSecondsSinceEpoch: 10, createdAt: time.Now()},
 		},
 		jobsChannel:    jobsChannel,
 		newJobsChannel: newJobsChannel,

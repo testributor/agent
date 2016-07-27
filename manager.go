@@ -43,7 +43,7 @@ func (m *Manager) FetchJobs() {
 	}
 	var jobs = make([]TestJob, 0, 10)
 	for _, job := range result.([]interface{}) {
-		jobs = append(jobs, TestJobNew(job.(map[string]interface{})))
+		jobs = append(jobs, NewTestJob(job.(map[string]interface{})))
 	}
 
 	if len(jobs) > 0 {

@@ -50,12 +50,16 @@ func (builder *TestJobBuilder) createdAt() time.Time {
 	return createdAt
 }
 
-func (builder *TestJobBuilder) sentAtSecondsSinceEpoch() float64 {
-	return (*builder)["sent_at_seconds_since_epoch"].(float64)
+func (builder *TestJobBuilder) command() string {
+	return (*builder)["command"].(string)
 }
 
-// TestJobNew is used to create a TestJob from the API response
-func TestJobNew(jobData map[string]interface{}) TestJob {
+func (builder *TestJobBuilder) sentAtSecondsSinceEpoch() int64 {
+	return int64((*builder)["sent_at_seconds_since_epoch"].(float64))
+}
+
+// NewTestJob is used to create a TestJob from the API response
+func NewTestJob(jobData map[string]interface{}) TestJob {
 	builder := TestJobBuilder(jobData)
 
 	testJob := TestJob{
@@ -63,7 +67,23 @@ func TestJobNew(jobData map[string]interface{}) TestJob {
 		costPredictionSeconds:   builder.costPredictionSeconds(),
 		sentAtSecondsSinceEpoch: builder.sentAtSecondsSinceEpoch(),
 		createdAt:               builder.createdAt(),
+		command:                 builder.command(),
 	}
 
 	return testJob
+}
+
+func (testJob *TestJob) Run(logger Logger) {
+	testJob.startedAtSecondsSinceEpoch = time.Now().Unix()
+
+	logger.Log("Running " + testJob.command)
+
+	res, err := system_command.Run(testJob.command, logger)
+	if err != nil {
+		testJob.result = err.Error()
+		testJob.resultType = system_command.RESULT_TYPES["error"]
+	} else {
+		testJob.result = res.CombinedOutput
+		testJob.resultType = res.ResultType
+	}
 }

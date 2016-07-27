@@ -3,7 +3,6 @@ package main
 //import "time"
 import (
 	"os"
-	"strconv"
 )
 
 type Worker struct {
@@ -26,11 +25,19 @@ func NewWorker(jobsChannel chan *TestJob, reportsChannel chan *TestJob) *Worker 
 }
 
 func (w *Worker) Start() {
-	var nextJob *TestJob
 	w.logger.Log("Entering loop")
 	for {
-		nextJob = <-w.jobsChannel
-		// Run the job
-		w.logger.Log("Cost prediction: " + strconv.FormatFloat(nextJob.costPredictionSeconds, 'f', 2, 64))
+		w.RunJob()
 	}
+}
+
+// RunJobs reads a job from the jobsChannel and runs it.
+func (w *Worker) RunJob() {
+	w.logger.Log("Waiting for next job")
+	nextJob := <-w.jobsChannel
+	nextJob.Run(w.logger)
+
+	go func() {
+		w.reportsChannel <- nextJob
+	}()
 }

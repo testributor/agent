@@ -8,8 +8,10 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -80,11 +82,28 @@ func NewClient(logger Logger) *APIClient {
 // HandleRequest takes an *http.Request, makes the request and returns the
 // result as an empty interface.
 // https://blog.golang.org/json-and-go
-func (c *APIClient) PerformRequest(method string, path string) (interface{}, error) {
-	request, err := http.NewRequest(method, apiUrl+path, nil)
-	if err != nil {
-		return nil, err
+func (c *APIClient) PerformRequest(method string, path string, body string) (interface{}, error) {
+	var request *http.Request
+	var err error
+
+	if body != "" {
+		request, err = http.NewRequest(method, apiUrl+path, strings.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		request, err = http.NewRequest(method, apiUrl+path, nil)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	if method == "POST" || method == "PATCH" {
+		// multipart/form-data vs application/x-www-form-urlencoded
+		// http://stackoverflow.com/a/4073451/974285
+		request.Header.Add("Content-Type", "multipart/form-data")
+	}
+	request.Header.Add("WORKER_UUID", WorkerUUID)
 
 	requestStart := time.Now()
 	resp, err := c.Do(request)
@@ -94,7 +113,7 @@ func (c *APIClient) PerformRequest(method string, path string) (interface{}, err
 		c.logger.Log("Error occured after " + requestDuration)
 		c.logger.Log("Retrying in " + strconv.Itoa(REQUEST_ERROR_TIMEOUT_SECONDS) + " seconds")
 		time.Sleep(REQUEST_ERROR_TIMEOUT_SECONDS * time.Second)
-		return c.PerformRequest(method, path)
+		return c.PerformRequest(method, path, body)
 	}
 
 	if resp.StatusCode == 401 {
@@ -108,18 +127,38 @@ func (c *APIClient) PerformRequest(method string, path string) (interface{}, err
 	}
 
 	var result interface{}
-	err = json.Unmarshal(contents, &result)
-	if err != nil {
-		return nil, err
+	if string(contents) != "" {
+		err = json.Unmarshal(contents, &result)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return result, nil
 }
 
 func (c *APIClient) ProjectSetupData() (interface{}, error) {
-	return c.PerformRequest("GET", "projects/setup_data")
+	return c.PerformRequest("GET", "projects/setup_data", "")
 }
 
 func (c *APIClient) FetchJobs() (interface{}, error) {
-	return c.PerformRequest("PATCH", "test_jobs/bind_next_batch")
+	return c.PerformRequest("PATCH", "test_jobs/bind_next_batch", "")
+}
+
+func (c *APIClient) Beacon() (interface{}, error) {
+	return c.PerformRequest("POST", "projects/beacon", "")
+}
+
+// http://codefol.io/posts/How-Does-Rack-Parse-Query-Params-With-parse-nested-query
+func (c *APIClient) UpdateTestJobs(testJobs []TestJob) (interface{}, error) {
+	form := url.Values{}
+	for _, job := range testJobs {
+		jobData, err := json.Marshal(job)
+		if err != nil {
+			return new(interface{}), err
+		}
+		form.Add("jobs["+strconv.Itoa(job.Id)+"]", string(jobData))
+	}
+
+	return c.PerformRequest("PATCH", "test_jobs/batch_update", form.Encode())
 }

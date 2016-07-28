@@ -1,22 +1,32 @@
 package main
 
-import "os"
+import (
+	"github.com/tuvistavie/securerandom"
+	"os"
+	"strings"
+)
+
+var WorkerUUID string
+var WorkerUUIDShort string
 
 func main() {
 	logger := Logger{"Main", os.Stdout}
 
 	printLogo(logger)
 
-	// Check if env vars are set, use defaults if not (or exit if needed)
-	// and initialize oauth token.
-	err := SetupClientData()
-	if err != nil {
+	if err := setWorkerUuid(); err != nil {
 		logger.Log(err.Error())
 		os.Exit(1)
 	}
 
-	err = EnsureGit(logger)
-	if err != nil {
+	// Check if env vars are set, use defaults if not (or exit if needed)
+	// and initialize oauth token.
+	if err := SetupClientData(); err != nil {
+		logger.Log(err.Error())
+		os.Exit(1)
+	}
+
+	if err := EnsureGit(logger); err != nil {
 		logger.Log(err.Error())
 		os.Exit(1)
 	}
@@ -27,8 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = project.Init(logger)
-	if err != nil {
+	if err := project.Init(logger); err != nil {
 		logger.Log(err.Error())
 		os.Exit(1)
 	}
@@ -55,4 +64,15 @@ func printLogo(logger Logger) {
 
                               https://www.testributor.com
 `)
+}
+
+func setWorkerUuid() error {
+	var err error
+	WorkerUUID, err = securerandom.Uuid()
+	if err != nil {
+		return err
+	}
+	WorkerUUIDShort = strings.Split(WorkerUUID, "-")[0]
+
+	return nil
 }

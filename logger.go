@@ -14,7 +14,8 @@ type Logger struct {
 // Write is implemented as part of the io.Writer interface
 func (l Logger) Write(p []byte) (n int, err error) {
 	now := time.Now().UTC()
-	short_uuid := "UUID_GOES_HERE" // TODO make this dynamic
+	short_uuid := WorkerUUIDShort
+
 	// TODO: ljust
 	prefix := now.Format(
 		"[15:04:05 Mon 02 Jan UTC]") +

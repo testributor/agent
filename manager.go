@@ -43,7 +43,9 @@ func (m *Manager) FetchJobs() {
 	}
 	var jobs = make([]TestJob, 0, 10)
 	for _, job := range result.([]interface{}) {
-		jobs = append(jobs, NewTestJob(job.(map[string]interface{})))
+		testJob := NewTestJob(job.(map[string]interface{}))
+		testJob.QueuedAtSecondsSinceEpoch = time.Now().Unix()
+		jobs = append(jobs, testJob)
 	}
 
 	if len(jobs) > 0 {
@@ -70,7 +72,7 @@ func (m *Manager) workloadOnWorkerSeconds() float64 {
 func (m *Manager) TotalWorkloadInQueueSeconds() float64 {
 	totalWorkload := float64(0)
 	for _, job := range m.jobs {
-		totalWorkload += job.costPredictionSeconds
+		totalWorkload += job.CostPredictionSeconds
 	}
 
 	totalWorkload += m.workloadOnWorkerSeconds()
@@ -90,13 +92,9 @@ func (m *Manager) LowWorkload() bool {
 func (m *Manager) AssignJobToWorker() bool {
 	if length := len(m.jobs); length > 0 {
 		jobToBeAssigned := m.jobs[0]
-		m.workerCurrentJobCostPredictionSeconds = jobToBeAssigned.costPredictionSeconds
+		m.workerCurrentJobCostPredictionSeconds = jobToBeAssigned.CostPredictionSeconds
 		m.workerCurrentJobStartedAt = time.Now()
 
-		// NOTE: copy to a new slice to avoid growing the underlying array indefinitely
-		// This will create garbage to be collected (the old m.jobs slice)
-		// so we might want to do it less frequently (for example every 100
-		// assignments or something)
 		newJobsList := make([]TestJob, len(m.jobs)-1)
 		copy(newJobsList, m.jobs[1:])
 		m.jobs = newJobsList

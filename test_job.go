@@ -7,14 +7,18 @@ import (
 )
 
 type TestJob struct {
-	id                         int
-	costPredictionSeconds      float64
-	sentAtSecondsSinceEpoch    int64
-	startedAtSecondsSinceEpoch int64
-	createdAt                  time.Time
-	command                    string
-	result                     string
-	resultType                 int
+	Id                         int       `json:"id"`
+	CostPredictionSeconds      float64   `json:"cost_prediction_seconds"`
+	SentAtSecondsSinceEpoch    int64     `json:"sent_at_seconds_since_epoch"`
+	StartedAtSecondsSinceEpoch int64     `json:"started_at_seconds_since_epoch"`
+	CreatedAt                  time.Time `json:"created_at"`
+	Command                    string    `json:"command"`
+	Result                     string    `json:"result"`
+	ResultType                 int       `json:"status"`
+	TestRunId                  int       `json:"test_run_id"`
+	WorkerInQueueSeconds       int64     `json:"worker_in_queue_seconds"`
+	WorkerCommandRunSeconds    int64     `json:"worker_command_run_seconds"`
+	QueuedAtSecondsSinceEpoch  int64
 }
 
 // This is a custom type based on the type return my APIClient's FetchJobs
@@ -24,6 +28,12 @@ type TestJobBuilder map[string]interface{}
 
 func (builder *TestJobBuilder) id() int {
 	return int((*builder)["id"].(float64))
+}
+
+func (builder *TestJobBuilder) testRunId() int {
+	testRun := (*builder)["test_run"].(map[string]interface{})
+
+	return int(testRun["id"].(float64))
 }
 
 func (builder *TestJobBuilder) costPredictionSeconds() float64 {
@@ -63,27 +73,33 @@ func NewTestJob(jobData map[string]interface{}) TestJob {
 	builder := TestJobBuilder(jobData)
 
 	testJob := TestJob{
-		id: builder.id(),
-		costPredictionSeconds:   builder.costPredictionSeconds(),
-		sentAtSecondsSinceEpoch: builder.sentAtSecondsSinceEpoch(),
-		createdAt:               builder.createdAt(),
-		command:                 builder.command(),
+		Id:                      builder.id(),
+		TestRunId:               builder.testRunId(),
+		CostPredictionSeconds:   builder.costPredictionSeconds(),
+		SentAtSecondsSinceEpoch: builder.sentAtSecondsSinceEpoch(),
+		CreatedAt:               builder.createdAt(),
+		Command:                 builder.command(),
 	}
 
 	return testJob
 }
 
 func (testJob *TestJob) Run(logger Logger) {
-	testJob.startedAtSecondsSinceEpoch = time.Now().Unix()
+	testJob.StartedAtSecondsSinceEpoch = time.Now().Unix()
 
-	logger.Log("Running " + testJob.command)
+	logger.Log("Running " + testJob.Command)
 
-	res, err := system_command.Run(testJob.command, logger)
+	res, err := system_command.Run(testJob.Command, logger)
+
 	if err != nil {
-		testJob.result = err.Error()
-		testJob.resultType = system_command.RESULT_TYPES["error"]
+		testJob.Result = err.Error()
+		testJob.ResultType = system_command.RESULT_TYPES["error"]
 	} else {
-		testJob.result = res.CombinedOutput
-		testJob.resultType = res.ResultType
+		testJob.Result = res.CombinedOutput
+		testJob.ResultType = res.ResultType
 	}
+
+	testJob.WorkerInQueueSeconds =
+		testJob.StartedAtSecondsSinceEpoch - testJob.QueuedAtSecondsSinceEpoch
+	testJob.WorkerCommandRunSeconds = int64(res.DurationSeconds)
 }

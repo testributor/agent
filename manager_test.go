@@ -7,17 +7,17 @@ import (
 
 func TestAssignJobToWorkerWhenNonEmpty(t *testing.T) {
 	manager := Manager{}
-	expectedJob := TestJob{id: 1, costPredictionSeconds: 4,
-		sentAtSecondsSinceEpoch: 100, createdAt: time.Now()}
+	expectedJob := TestJob{Id: 1, CostPredictionSeconds: 4,
+		SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()}
 
 	manager.jobs = []TestJob{
 		expectedJob,
-		TestJob{id: 2, costPredictionSeconds: 1,
-			sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
-		TestJob{id: 3, costPredictionSeconds: 2,
-			sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
-		TestJob{id: 4, costPredictionSeconds: 3,
-			sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
+		TestJob{Id: 2, CostPredictionSeconds: 1,
+			SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
+		TestJob{Id: 3, CostPredictionSeconds: 2,
+			SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
+		TestJob{Id: 4, CostPredictionSeconds: 3,
+			SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
 	}
 
 	oldJobs := len(manager.jobs)
@@ -31,7 +31,7 @@ func TestAssignJobToWorkerWhenNonEmpty(t *testing.T) {
 	}
 
 	if manager.workerCurrentJobCostPredictionSeconds !=
-		expectedJob.costPredictionSeconds {
+		expectedJob.CostPredictionSeconds {
 		t.Error("Should pop the first job in queue")
 	}
 }
@@ -55,12 +55,12 @@ func TestTotalWorkloadInQueueSeconds(t *testing.T) {
 	manager := Manager{
 		workerCurrentJobCostPredictionSeconds: 1,
 		jobs: []TestJob{
-			TestJob{id: 2, costPredictionSeconds: 2,
-				sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
-			TestJob{id: 3, costPredictionSeconds: 10,
-				sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
-			TestJob{id: 4, costPredictionSeconds: 100,
-				sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
+			TestJob{Id: 2, CostPredictionSeconds: 2,
+				SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
+			TestJob{Id: 3, CostPredictionSeconds: 10,
+				SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
+			TestJob{Id: 4, CostPredictionSeconds: 100,
+				SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
 		},
 	}
 
@@ -75,12 +75,12 @@ func TestLowWorkload(t *testing.T) {
 	manager := Manager{
 		workerCurrentJobCostPredictionSeconds: 1,
 		jobs: []TestJob{
-			TestJob{id: 2, costPredictionSeconds: 1,
-				sentAtSecondsSinceEpoch: 2, createdAt: time.Now()},
-			TestJob{id: 3, costPredictionSeconds: 2,
-				sentAtSecondsSinceEpoch: 10, createdAt: time.Now()},
-			TestJob{id: 4, costPredictionSeconds: 3,
-				sentAtSecondsSinceEpoch: 100, createdAt: time.Now()},
+			TestJob{Id: 2, CostPredictionSeconds: 1,
+				SentAtSecondsSinceEpoch: 2, CreatedAt: time.Now()},
+			TestJob{Id: 3, CostPredictionSeconds: 2,
+				SentAtSecondsSinceEpoch: 10, CreatedAt: time.Now()},
+			TestJob{Id: 4, CostPredictionSeconds: 3,
+				SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
 		},
 	}
 
@@ -115,10 +115,10 @@ func TestParseChannelsWhenJobsExists(t *testing.T) {
 	manager := Manager{
 		jobs: []TestJob{
 			// Keep the cost predicton big enough to avoid a call to FetchJobs
-			TestJob{id: 2, costPredictionSeconds: 100,
-				sentAtSecondsSinceEpoch: 2, createdAt: time.Now()},
-			TestJob{id: 3, costPredictionSeconds: 200,
-				sentAtSecondsSinceEpoch: 10, createdAt: time.Now()},
+			TestJob{Id: 2, CostPredictionSeconds: 100,
+				SentAtSecondsSinceEpoch: 2, CreatedAt: time.Now()},
+			TestJob{Id: 3, CostPredictionSeconds: 200,
+				SentAtSecondsSinceEpoch: 10, CreatedAt: time.Now()},
 		},
 		jobsChannel:    jobsChannel,
 		newJobsChannel: newJobsChannel,

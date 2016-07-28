@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"testing"
 	"time"
 )
@@ -54,10 +55,73 @@ func TestBuilderSentAtSecondsSinceEpoch(t *testing.T) {
 	}
 }
 
-func TestBuilderCostPredicitonSeconds(t *testing.T) {
+func TestBuilderCostPredictionSeconds(t *testing.T) {
 	builder := prepareTestJobBuilder()
 
 	if builder.costPredictionSeconds() != 1.824951 {
 		t.Error("It should return 1.824951 but got: ", builder.costPredictionSeconds())
+	}
+}
+
+func TestBuilderTestRunId(t *testing.T) {
+	builder := prepareTestJobBuilder()
+
+	if builder.testRunId() != 1915 {
+		t.Error("It should return 1915 but got: ", builder.testRunId())
+	}
+}
+
+func TestRunSettingWorkerInQueueSeconds(t *testing.T) {
+	testJob := TestJob{
+		Id:                        23,
+		TestRunId:                 12,
+		CostPredictionSeconds:     12,
+		SentAtSecondsSinceEpoch:   100,
+		Command:                   "ls",
+		QueuedAtSecondsSinceEpoch: time.Now().Unix() - 2,
+	}
+	testJob.Run(Logger{"test", ioutil.Discard})
+
+	// Calling Run should only take some milliseconds so rounded it should be 2 seconds.
+	if testJob.WorkerInQueueSeconds != 2 {
+		t.Error("It should set WorkerInQueueSeconds to 2 but it is: ", testJob.WorkerInQueueSeconds)
+	}
+}
+
+func TestRunSettingWorkerCommandRunSeconds(t *testing.T) {
+	testJob := TestJob{
+		Id:                        23,
+		TestRunId:                 12,
+		CostPredictionSeconds:     12,
+		SentAtSecondsSinceEpoch:   100,
+		Command:                   "sleep 1",
+		QueuedAtSecondsSinceEpoch: time.Now().Unix() - 2,
+	}
+	testJob.Run(Logger{"test", ioutil.Discard})
+
+	// Calling Run should only take some milliseconds so rounded it should be 1 seconds.
+	if testJob.WorkerCommandRunSeconds != 1 {
+		t.Error("It should set WorkerCommandRunSeconds to 1 but it is: ", testJob.WorkerCommandRunSeconds)
+	}
+}
+
+func TestJsonMarshal(t *testing.T) {
+	testJob := TestJob{
+		Id:                         23,
+		TestRunId:                  12,
+		CostPredictionSeconds:      12,
+		SentAtSecondsSinceEpoch:    100,
+		Command:                    "sleep 1",
+		QueuedAtSecondsSinceEpoch:  123,
+		WorkerCommandRunSeconds:    100,
+		WorkerInQueueSeconds:       20,
+		StartedAtSecondsSinceEpoch: 10,
+	}
+
+	jsonData, _ := json.Marshal(testJob)
+	expected := `{"id":23,"cost_prediction_seconds":12,"sent_at_seconds_since_epoch":100,"started_at_seconds_since_epoch":10,"created_at":"0001-01-01T00:00:00Z","command":"sleep 1","result":"","status":0,"test_run_id":12,"worker_in_queue_seconds":20,"worker_command_run_seconds":100,"QueuedAtSecondsSinceEpoch":123}`
+
+	if string(jsonData) != expected {
+		t.Error("Expected: \n", expected, "\nGot: \n", string(jsonData))
 	}
 }

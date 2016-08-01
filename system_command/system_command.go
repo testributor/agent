@@ -116,6 +116,7 @@ func Run(command string, logger io.Writer) (CommandResult, error) {
 		}
 	}
 
+	// TODO: This doesn't seem to work correctly. We get errors with a status FAILED.
 	var resultType int
 	switch {
 	case waitResult == nil:

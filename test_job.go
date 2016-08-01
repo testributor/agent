@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+const (
+	NO_PREDICTION_WORKLOAD_SECONDS = 999999999
+)
+
 type TestJob struct {
 	Id                         int       `json:"id"`
 	CostPredictionSeconds      float64   `json:"cost_prediction_seconds"`
@@ -45,9 +49,15 @@ func (builder *TestJobBuilder) costPredictionSeconds() float64 {
 			panic("Invalid format for cost prediction: " + err.Error())
 		}
 
-		return costPredictionSeconds
+		// If no prediction is available use the default "huge" value to avoid
+		// fetching more jobs.
+		if costPredictionSeconds == 0 {
+			return NO_PREDICTION_WORKLOAD_SECONDS
+		} else {
+			return costPredictionSeconds
+		}
 	default:
-		return 0
+		return NO_PREDICTION_WORKLOAD_SECONDS
 	}
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -18,6 +19,17 @@ var FetchJobsAPIResponse []byte = []byte(`
     "id":1915,
     "project":{"repository_ssh_url":"git@github.com:ispyropoulos/katana.git"}
   }
+},
+{
+  "command":"bin/rails runner -e test '$LOAD_PATH.push(\"#{Rails.root}/test\"); require \"test/controllers/dashboard_controller_test.rb\".gsub(/^test\\//,\"\")'",
+  "created_at":"2016-07-09T09:03:05.717Z",
+  "id":109136,
+  "cost_prediction":"0",
+  "sent_at_seconds_since_epoch":1468054988,
+  "test_run":{"commit_sha":"f151713e400ac3d8dc1291fe21a413a6f813072d",
+    "id":1915,
+    "project":{"repository_ssh_url":"git@github.com:ispyropoulos/katana.git"}
+  }
 }]
 `)
 
@@ -26,6 +38,13 @@ func prepareTestJobBuilder() TestJobBuilder {
 	_ = json.Unmarshal(FetchJobsAPIResponse, &parsedResponse)
 
 	return TestJobBuilder(parsedResponse.([]interface{})[0].(map[string]interface{}))
+}
+
+func prepareNoPredictionTestJobBuilder() TestJobBuilder {
+	var parsedResponse interface{}
+	_ = json.Unmarshal(FetchJobsAPIResponse, &parsedResponse)
+
+	return TestJobBuilder(parsedResponse.([]interface{})[1].(map[string]interface{}))
 }
 
 func TestBuilderId(t *testing.T) {
@@ -60,6 +79,14 @@ func TestBuilderCostPredictionSeconds(t *testing.T) {
 
 	if builder.costPredictionSeconds() != 1.824951 {
 		t.Error("It should return 1.824951 but got: ", builder.costPredictionSeconds())
+	}
+}
+
+func TestBuilderCostPredictionSecondsWhenPredictionIsZero(t *testing.T) {
+	builder := prepareNoPredictionTestJobBuilder()
+
+	if builder.costPredictionSeconds() != NO_PREDICTION_WORKLOAD_SECONDS {
+		t.Error("It should return "+strconv.Itoa(NO_PREDICTION_WORKLOAD_SECONDS)+" but got: ", builder.costPredictionSeconds())
 	}
 }
 

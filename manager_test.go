@@ -151,3 +151,47 @@ func TestParseChannelsWhenJobsExists(t *testing.T) {
 		t.Error("Expected jobs to be ", oldJobs+1, "but found: ", len(manager.jobs))
 	}
 }
+
+func TestParseChannelsWhenWorkerIsIdlingAndThereAreNoJobs(t *testing.T) {
+	workerIdlingChannel := make(chan bool)
+
+	manager := Manager{
+		jobs:                                  []TestJob{},
+		workerIdlingChannel:                   workerIdlingChannel,
+		workerCurrentJobCostPredictionSeconds: 1000,
+	}
+
+	go func() {
+		manager.workerIdlingChannel <- true
+	}()
+
+	manager.ParseChannels()
+
+	if manager.workerCurrentJobCostPredictionSeconds != 0 {
+		t.Error("It should reset workerCurrentJobCostPredictionSeconds to 0 but got: ",
+			manager.workerCurrentJobCostPredictionSeconds)
+	}
+}
+
+func TestParseChannelsWhenWorkerIsIdlingAndThereAreJobs(t *testing.T) {
+	workerIdlingChannel := make(chan bool)
+
+	manager := Manager{
+		jobs: []TestJob{
+			TestJob{},
+		},
+		workerIdlingChannel:                   workerIdlingChannel,
+		workerCurrentJobCostPredictionSeconds: 1000,
+	}
+
+	go func() {
+		manager.workerIdlingChannel <- true
+	}()
+
+	manager.ParseChannels()
+
+	if manager.workerCurrentJobCostPredictionSeconds != 0 {
+		t.Error("It should reset workerCurrentJobCostPredictionSeconds to 0 but got: ",
+			manager.workerCurrentJobCostPredictionSeconds)
+	}
+}

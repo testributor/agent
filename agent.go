@@ -46,7 +46,7 @@ func main() {
 	reportsChannel := make(chan *TestJob)
 
 	manager := NewManager(jobsChannel)
-	worker := NewWorker(jobsChannel, reportsChannel)
+	worker := NewWorker(jobsChannel, reportsChannel, manager.workerIdlingChannel)
 	reporter := NewReporter(reportsChannel)
 
 	go worker.Start()

@@ -378,7 +378,6 @@ func (project *Project) TestributorYml() (TestributorYml, error) {
 // This means that in order to be able to update this file after we have already
 // written it, we need to start from a clean repo state before this method
 // is called (running `git clean -df` would do the trick: https://git-scm.com/docs/git-clean/2.2.0)
-// TODO: If the file's directory does not exist, do we need to create it?
 func (project *Project) WriteProjectFiles(logger Logger) error {
 	for _, file := range project.files {
 		path := file["path"].(string)

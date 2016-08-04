@@ -10,7 +10,7 @@ func TestRunJobSendingToWorkerIdlingChannel(t *testing.T) {
 	jobsChannel := make(chan *TestJob)
 	reportsChannel := make(chan *TestJob)
 	workerIdlingChannel := make(chan bool)
-	worker := NewWorker(jobsChannel, reportsChannel, workerIdlingChannel)
+	worker := NewWorker(jobsChannel, reportsChannel, workerIdlingChannel, &Project{})
 	worker.logger = Logger{"", ioutil.Discard}
 	workerIdling := false
 

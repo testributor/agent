@@ -274,6 +274,21 @@ func (project *Project) CreateProjectDir(logger Logger) error {
 	return nil
 }
 
+// CommitExists returns true when the commit SHA is known to git, false otherwise.
+func (project *Project) CommitExists(commitSha string) (bool, error) {
+	err := os.Chdir(project.directory)
+	if err != nil {
+		return false, err
+	}
+
+	res, err := system_command.Run("git cat-file -t "+commitSha, ioutil.Discard)
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(res.Output) == "commit", nil
+}
+
 func (project *Project) FetchProjectRepo(logger Logger) error {
 	logger.Log("Fetching repo")
 
@@ -474,7 +489,7 @@ func (project *Project) PrepareBashFunctionsAndVariables(buildCommandVariables m
 }
 
 // SetupTestEnvironment checks out the specified commit, creates any overriden
-// files,
+// files
 func (project *Project) SetupTestEnvironment(commitSha string, logger Logger) error {
 	err := os.Chdir(project.directory)
 	if err != nil {
@@ -487,7 +502,13 @@ func (project *Project) SetupTestEnvironment(commitSha string, logger Logger) er
 		logger.Log("Resetting to default branch")
 		buildCommandVariables["WORKER_INITIALIZING"] = "true"
 	} else {
-		logger.Log("Checking out commit" + commitSha)
+		if exists, err := project.CommitExists(commitSha); err != nil || !exists {
+			if err = project.FetchProjectRepo(logger); err != nil {
+				return err
+			}
+		}
+
+		logger.Log("Checking out commit " + commitSha)
 		currentCommitSha, err := project.CurrentCommitSha()
 		if err != nil {
 			return err
@@ -513,7 +534,7 @@ func (project *Project) SetupTestEnvironment(commitSha string, logger Logger) er
 
 	variablesStr := ""
 	for k, v := range buildCommandVariables {
-		variablesStr += k + "=" + v
+		variablesStr += k + "=" + v + " "
 	}
 	logger.Log("Running build commands with available variables: " + variablesStr)
 	err = project.PrepareBashFunctionsAndVariables(buildCommandVariables)

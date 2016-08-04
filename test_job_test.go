@@ -98,6 +98,14 @@ func TestBuilderTestRunId(t *testing.T) {
 	}
 }
 
+func TestBuilderCommitSha(t *testing.T) {
+	builder := prepareTestJobBuilder()
+
+	if builder.commitSha() != "f151713e400ac3d8dc1291fe21a413a6f813072d" {
+		t.Error("It should return f151713e400ac3d8dc1291fe21a413a6f813072d but got: ", builder.testRunId())
+	}
+}
+
 func TestRunSettingWorkerInQueueSeconds(t *testing.T) {
 	testJob := TestJob{
 		Id:                        23,
@@ -143,10 +151,11 @@ func TestJsonMarshal(t *testing.T) {
 		WorkerCommandRunSeconds:    100,
 		WorkerInQueueSeconds:       20,
 		StartedAtSecondsSinceEpoch: 10,
+		CommitSha:                  "f151713e400ac3d8dc1291fe21a413a6f813072d",
 	}
 
 	jsonData, _ := json.Marshal(testJob)
-	expected := `{"id":23,"cost_prediction_seconds":12,"sent_at_seconds_since_epoch":100,"started_at_seconds_since_epoch":10,"created_at":"0001-01-01T00:00:00Z","command":"sleep 1","result":"","status":0,"test_run_id":12,"worker_in_queue_seconds":20,"worker_command_run_seconds":100,"QueuedAtSecondsSinceEpoch":123}`
+	expected := `{"id":23,"cost_prediction_seconds":12,"sent_at_seconds_since_epoch":100,"started_at_seconds_since_epoch":10,"created_at":"0001-01-01T00:00:00Z","command":"sleep 1","result":"","status":0,"test_run_id":12,"worker_in_queue_seconds":20,"worker_command_run_seconds":100,"QueuedAtSecondsSinceEpoch":123,"CommitSha":"f151713e400ac3d8dc1291fe21a413a6f813072d"}`
 
 	if string(jsonData) != expected {
 		t.Error("Expected: \n", expected, "\nGot: \n", string(jsonData))

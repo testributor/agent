@@ -23,6 +23,7 @@ type TestJob struct {
 	WorkerInQueueSeconds       int64     `json:"worker_in_queue_seconds"`
 	WorkerCommandRunSeconds    int64     `json:"worker_command_run_seconds"`
 	QueuedAtSecondsSinceEpoch  int64
+	CommitSha                  string
 }
 
 // This is a custom type based on the type return my APIClient's FetchJobs
@@ -38,6 +39,12 @@ func (builder *TestJobBuilder) testRunId() int {
 	testRun := (*builder)["test_run"].(map[string]interface{})
 
 	return int(testRun["id"].(float64))
+}
+
+func (builder *TestJobBuilder) commitSha() string {
+	testRun := (*builder)["test_run"].(map[string]interface{})
+
+	return testRun["commit_sha"].(string)
 }
 
 func (builder *TestJobBuilder) costPredictionSeconds() float64 {
@@ -85,6 +92,7 @@ func NewTestJob(jobData map[string]interface{}) TestJob {
 	testJob := TestJob{
 		Id:                      builder.id(),
 		TestRunId:               builder.testRunId(),
+		CommitSha:               builder.commitSha(),
 		CostPredictionSeconds:   builder.costPredictionSeconds(),
 		SentAtSecondsSinceEpoch: builder.sentAtSecondsSinceEpoch(),
 		CreatedAt:               builder.createdAt(),

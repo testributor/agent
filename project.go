@@ -259,7 +259,8 @@ func (project *Project) ProjectDir() (string, error) {
 func (project *Project) CreateProjectDir(logger Logger) error {
 	if fileInfo, err := os.Stat(project.directory); os.IsNotExist(err) || (err == nil && !fileInfo.IsDir()) {
 		logger.Log("Couldn't find " + project.directory + " directory. I will try to create it.")
-		mkDirErr := os.Mkdir(project.directory, os.FileMode(0777))
+
+		mkDirErr := os.MkdirAll(project.directory, os.FileMode(0777))
 		if mkDirErr != nil {
 			return mkDirErr
 		}

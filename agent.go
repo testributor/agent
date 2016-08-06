@@ -44,10 +44,11 @@ func main() {
 
 	jobsChannel := make(chan *TestJob)
 	reportsChannel := make(chan *TestJob)
+	cancelledTestRunIdsChan := make(chan []int)
 
-	manager := NewManager(jobsChannel)
+	manager := NewManager(jobsChannel, cancelledTestRunIdsChan)
 	worker := NewWorker(jobsChannel, reportsChannel, manager.workerIdlingChannel, project)
-	reporter := NewReporter(reportsChannel)
+	reporter := NewReporter(reportsChannel, cancelledTestRunIdsChan)
 
 	go worker.Start()
 	go reporter.Start()

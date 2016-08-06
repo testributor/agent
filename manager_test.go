@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"testing"
 	"time"
 )
@@ -193,5 +194,51 @@ func TestParseChannelsWhenWorkerIsIdlingAndThereAreJobs(t *testing.T) {
 	if manager.workerCurrentJobCostPredictionSeconds != 0 {
 		t.Error("It should reset workerCurrentJobCostPredictionSeconds to 0 but got: ",
 			manager.workerCurrentJobCostPredictionSeconds)
+	}
+}
+
+func TestCancelTestRuns(t *testing.T) {
+	cancelledTestRunIdsChan := make(chan []int)
+
+	job1 := TestJob{Id: 1, TestRunId: 1234}
+	job2 := TestJob{Id: 2, TestRunId: 2345}
+	job3 := TestJob{Id: 3, TestRunId: 2345}
+	job4 := TestJob{Id: 4, TestRunId: 1234}
+
+	manager := Manager{
+		jobs: []TestJob{job1, job2, job3, job4},
+		cancelledTestRunIdsChan: cancelledTestRunIdsChan,
+		logger:                  Logger{"Manager", ioutil.Discard},
+	}
+
+	manager.CancelTestRuns([]int{1234})
+
+	if len(manager.jobs) != 2 || manager.jobs[0] != job2 || manager.jobs[1] != job3 {
+		t.Error("It should remove cancelled builds from the jobs slice")
+	}
+}
+
+func TestCancelTestRunsThroughParseChannels(t *testing.T) {
+	cancelledTestRunIdsChan := make(chan []int)
+
+	job1 := TestJob{Id: 1, TestRunId: 1234}
+	job2 := TestJob{Id: 2, TestRunId: 2345}
+	job3 := TestJob{Id: 3, TestRunId: 2345}
+	job4 := TestJob{Id: 4, TestRunId: 1234}
+
+	manager := Manager{
+		jobs: []TestJob{job1, job2, job3, job4},
+		cancelledTestRunIdsChan: cancelledTestRunIdsChan,
+		logger:                  Logger{"Manager", ioutil.Discard},
+	}
+
+	go func() {
+		cancelledTestRunIdsChan <- []int{1234}
+	}()
+
+	manager.ParseChannels()
+
+	if len(manager.jobs) != 2 || manager.jobs[0] != job2 || manager.jobs[1] != job3 {
+		t.Error("It should remove cancelled builds from the jobs slice")
 	}
 }

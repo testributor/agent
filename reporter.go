@@ -20,19 +20,21 @@ type Reporter struct {
 	lastServerCommunication time.Time
 	activeSenders           int // Counts how many go routines are activelly trying to send reports
 	tickerChan              <-chan time.Time
-	activeSenderDone        chan bool
+	activeSenderDone        chan bool // We reduce the active senders by sending to this channel
+	cancelledTestRunIdsChan chan []int
 }
 
 // NewReporter should be used to create a Reporter instances. It ensures the correct
 // initialization of all fields.
-func NewReporter(reportsChannel chan *TestJob) *Reporter {
+func NewReporter(reportsChannel chan *TestJob, cancelledTestRunIdsChan chan []int) *Reporter {
 	logger := Logger{"Reporter", os.Stdout}
 	return &Reporter{
-		reportsChannel:   reportsChannel,
-		logger:           logger,
-		client:           NewClient(logger),
-		tickerChan:       time.NewTicker(time.Second * REPORTING_FREQUENCY_SECONDS).C,
-		activeSenderDone: make(chan bool),
+		reportsChannel:          reportsChannel,
+		logger:                  logger,
+		client:                  NewClient(logger),
+		tickerChan:              time.NewTicker(time.Second * REPORTING_FREQUENCY_SECONDS).C,
+		activeSenderDone:        make(chan bool),
+		cancelledTestRunIdsChan: cancelledTestRunIdsChan,
 	}
 }
 
@@ -82,18 +84,31 @@ func (r *Reporter) NeedToBeacon() bool {
 // To avoid this issue, we keep a track of "active" SendReport routines (using
 // a counter which decrements through a channel when routines exit). We apply a
 // sane limit to the number of these routines (ACTIVE_SENDERS_LIMIT).
-//
-// TODO: Handle the cancellation of jobs
 func (r *Reporter) SendReports(reports []TestJob) error {
 	defer func() { r.activeSenderDone <- true }() // decrement activeSenders
 
 	r.logger.Log("Sending " + strconv.Itoa(len(reports)) + " reports")
-	_, err := r.client.UpdateTestJobs(reports)
+	res, err := r.client.UpdateTestJobs(reports)
 	if err != nil {
 		r.logger.Log(err.Error())
 		return err
 	}
 	r.lastServerCommunication = time.Now()
 
+	// Tell Manager to cancel these TestRuns since they were cancelled on Testributor
+	// NOTE: We could do this in a go routine to let this sender exit but it
+	// shouldn't take long to send the cancelled ids to the manager so we do it here.
+	deleteTestRunIds := r.deleteTestRunIds(res)
+	r.cancelledTestRunIdsChan <- deleteTestRunIds
+
 	return nil
+}
+
+func (r *Reporter) deleteTestRunIds(response interface{}) []int {
+	deleteTestRunIds := []int{}
+	for _, id := range response.(map[string]interface{})["delete_test_runs"].([]interface{}) {
+		deleteTestRunIds = append(deleteTestRunIds, int(id.(float64)))
+	}
+
+	return deleteTestRunIds
 }

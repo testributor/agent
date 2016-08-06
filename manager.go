@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -15,6 +16,7 @@ const (
 type Manager struct {
 	jobsChannel                           chan *TestJob
 	newJobsChannel                        chan []TestJob // TODO: Make this a pointer to slice?
+	cancelledTestRunIdsChan               chan []int
 	workerIdlingChannel                   chan bool
 	jobs                                  []TestJob
 	workerCurrentJobCostPredictionSeconds float64
@@ -25,14 +27,15 @@ type Manager struct {
 
 // NewManager should be used to create a Manager instances. It ensures the correct
 // initialization of all fields.
-func NewManager(jobsChannel chan *TestJob) *Manager {
+func NewManager(jobsChannel chan *TestJob, cancelledTestRunIdsChan chan []int) *Manager {
 	logger := Logger{"Manager", os.Stdout}
 	return &Manager{
-		jobsChannel:         jobsChannel,
-		newJobsChannel:      make(chan []TestJob),
-		workerIdlingChannel: make(chan bool),
-		logger:              logger,
-		client:              NewClient(logger),
+		jobsChannel:             jobsChannel,
+		cancelledTestRunIdsChan: cancelledTestRunIdsChan,
+		newJobsChannel:          make(chan []TestJob),
+		workerIdlingChannel:     make(chan bool),
+		logger:                  logger,
+		client:                  NewClient(logger),
 	}
 }
 
@@ -137,9 +140,39 @@ func (m *Manager) AssignJobToWorker() bool {
 	}
 }
 
+func (m *Manager) CancelTestRuns(ids []int) {
+	if len(ids) == 0 {
+		return
+	}
+
+	newJobsList := []TestJob{}
+	// Uniq set implemented as a map (http://stackoverflow.com/a/9251352)
+	cancelledIdsSet := make(map[string]struct{})
+	for _, job := range m.jobs {
+		for _, id := range ids {
+			if job.TestRunId == id {
+				cancelledIdsSet[strconv.Itoa(id)] = struct{}{}
+			} else {
+				newJobsList = append(newJobsList, job)
+			}
+		}
+	}
+
+	if len(cancelledIdsSet) > 0 {
+		// Build a slice out of the "set" of cancelled ids
+		cancelledIds := make([]string, 0, len(cancelledIdsSet))
+		for id := range cancelledIdsSet {
+			cancelledIds = append(cancelledIds, id)
+		}
+		m.logger.Log("Cancelling builds: " + strings.Join(cancelledIds, ", "))
+		m.jobs = newJobsList
+	}
+}
+
 func (m *Manager) ParseChannels() {
 	var newJobs []TestJob
 
+	// TODO: These two selects need DRYing
 	if len(m.jobs) > 0 {
 		// TODO: we also need to monitor for cancelled jobs
 		select {
@@ -147,6 +180,8 @@ func (m *Manager) ParseChannels() {
 			m.jobs = append(m.jobs, newJobs...)
 		case <-m.workerIdlingChannel:
 			m.workerCurrentJobCostPredictionSeconds = 0
+		case cancelledIds := <-m.cancelledTestRunIdsChan:
+			m.CancelTestRuns(cancelledIds)
 		case m.jobsChannel <- &m.jobs[0]:
 			m.AssignJobToWorker()
 		}
@@ -158,6 +193,9 @@ func (m *Manager) ParseChannels() {
 			m.jobs = append(m.jobs, newJobs...)
 		case <-m.workerIdlingChannel:
 			m.workerCurrentJobCostPredictionSeconds = 0
+		case <-m.cancelledTestRunIdsChan:
+			// Do nothing, we just read this to let the Reporter continue.
+			// The reporter doesn't know if Manager has jobs in queue or not.
 		}
 	}
 }

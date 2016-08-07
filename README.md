@@ -15,9 +15,8 @@ It will replace the Ruby Agent as soon as it is stable.
 
 This program's functionality is directly related to the functionality offered by
 Testributor. For this reason, changes on Testributor might trigger changes on the
-Agent as well. For this reason, popular versioning schemes (semantic?) might not
-make much sense unless they apply to both Testributor and Agent. Versioning of the
-Agent is under consideration.
+Agent as well. Popular versioning schemes (semantic?) might not make much sense unless
+they apply to both Testributor and Agent. Versioning of the Agent is under consideration.
 
 ## Participating
 

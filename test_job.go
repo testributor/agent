@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ispyropoulos/agent/system_command"
+	"github.com/testributor/agent/system_command"
 	"strconv"
 	"time"
 )

@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"github.com/ispyropoulos/agent/system_command"
+	"github.com/testributor/agent/system_command"
 	"io/ioutil"
 	"os/exec"
 	"regexp"

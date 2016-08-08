@@ -2,8 +2,8 @@ package main
 
 import (
 	"errors"
-	"github.com/ispyropoulos/agent/system_command"
 	"github.com/mitchellh/go-homedir"
+	"github.com/testributor/agent/system_command"
 	"io/ioutil"
 	"os"
 	"path/filepath"

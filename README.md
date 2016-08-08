@@ -36,7 +36,7 @@ When "git" command is not found in PATH the Agent will try to install it on Debi
 Arch linux. This means that users can use most of the public images in hub.docker.com and other docker hosting services
 without modifications (no need to create a custom image). In the future more OS' and distributions might be supported.
 
-## Is is safe to run the Agent on my system?
+## Is it safe to run the Agent on my system?
 
 Any changes made by the Agent to the filesystem (files and directories created)
 are prefixed with "testributor" to avoid touching any existing files. You should

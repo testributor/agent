@@ -1,4 +1,6 @@
-# Testributor Agent
+# Testributor Agent 
+[![Build Status](https://www.testributor.com/projects/116-agent/status?branch=master)][testributor]
+[testributor]: https://www.testributor.com/projects/116-agent
 
 This is a program that connects to [Testributor](https://www.testributor.com) server
 and runs Builds for a project specified by APP_ID and APP_SECRET environment

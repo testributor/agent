@@ -7,8 +7,8 @@ import (
 )
 
 func TestRunJobSendingToWorkerIdlingChannel(t *testing.T) {
-	jobsChannel := make(chan *TestJob)
-	reportsChannel := make(chan *TestJob)
+	jobsChannel := make(chan Job)
+	reportsChannel := make(chan Job)
 	workerIdlingChannel := make(chan bool)
 	worker := NewWorker(jobsChannel, reportsChannel, workerIdlingChannel, &Project{})
 	worker.logger = Logger{"", ioutil.Discard}

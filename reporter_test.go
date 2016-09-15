@@ -3,25 +3,27 @@ package main
 import (
 	"encoding/json"
 	"reflect"
+	"strconv"
 	"testing"
 )
 
 func TestParseChannelsWhenThereIsANewReport(t *testing.T) {
-	reportsChan := make(chan *TestJob)
+	reportsChan := make(chan Job)
 	r := NewReporter(reportsChan, make(chan []int))
 
+	testJob := TestJob{Id: 123}
 	go func() {
-		reportsChan <- &TestJob{Id: 123}
+		reportsChan <- &testJob
 	}()
 
 	r.ParseChannels()
-	if len(r.reports) < 1 || r.reports[0].Id != 123 {
+	if len(r.reports) < 1 || r.reports[0].GetId() != strconv.Itoa(123) {
 		t.Error("It should put the new TestJob in the reports list")
 	}
 }
 
 func TestParseChannelsWhenActiveServerIsDone(t *testing.T) {
-	reportsChan := make(chan *TestJob)
+	reportsChan := make(chan Job)
 	r := NewReporter(reportsChan, make(chan []int))
 	r.activeSenders = 2
 
@@ -36,7 +38,7 @@ func TestParseChannelsWhenActiveServerIsDone(t *testing.T) {
 }
 
 func TestDeleteTestRunIds(t *testing.T) {
-	reportsChan := make(chan *TestJob)
+	reportsChan := make(chan Job)
 	r := NewReporter(reportsChan, make(chan []int))
 
 	responseText := `{"delete_test_runs":[1976]}`

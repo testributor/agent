@@ -13,10 +13,10 @@ const (
 )
 
 type Reporter struct {
-	reportsChannel          chan *TestJob
+	reportsChannel          chan Job
 	logger                  Logger
 	client                  *APIClient
-	reports                 []TestJob
+	reports                 []Job
 	lastServerCommunication time.Time
 	activeSenders           int // Counts how many go routines are activelly trying to send reports
 	tickerChan              <-chan time.Time
@@ -26,7 +26,7 @@ type Reporter struct {
 
 // NewReporter should be used to create a Reporter instances. It ensures the correct
 // initialization of all fields.
-func NewReporter(reportsChannel chan *TestJob, cancelledTestRunIdsChan chan []int) *Reporter {
+func NewReporter(reportsChannel chan Job, cancelledTestRunIdsChan chan []int) *Reporter {
 	logger := Logger{"Reporter", os.Stdout}
 	return &Reporter{
 		reportsChannel:          reportsChannel,
@@ -40,14 +40,14 @@ func NewReporter(reportsChannel chan *TestJob, cancelledTestRunIdsChan chan []in
 
 func (r *Reporter) ParseChannels() {
 	select {
-	case testJob := <-r.reportsChannel:
-		r.reports = append(r.reports, *testJob)
+	case job := <-r.reportsChannel:
+		r.reports = append(r.reports, job)
 	case <-r.activeSenderDone:
 		r.activeSenders -= 1
 	case <-r.tickerChan:
 		if r.activeSenders < ACTIVE_SENDERS_LIMIT && len(r.reports) > 0 {
 			go r.SendReports(r.reports)
-			r.reports = []TestJob{}
+			r.reports = []Job{}
 			r.activeSenders += 1
 		} else if r.NeedToBeacon() {
 			go func() {
@@ -73,7 +73,7 @@ func (r *Reporter) NeedToBeacon() bool {
 	return time.Since(r.lastServerCommunication).Seconds() > BEACON_THRESHOLD_SECONDS
 }
 
-// SendReports takes a slice of TestJobs and sends it to Testributor. It will
+// SendReports takes a slice of Jobs and sends it to Testributor. It will
 // continue trying until successfully sent. This method should be run as a go
 // routine to avoid blocking the worker in case of network issues. This means
 // that if manager successfully fetches jobs, but reporter cannot report them
@@ -84,7 +84,7 @@ func (r *Reporter) NeedToBeacon() bool {
 // To avoid this issue, we keep a track of "active" SendReport routines (using
 // a counter which decrements through a channel when routines exit). We apply a
 // sane limit to the number of these routines (ACTIVE_SENDERS_LIMIT).
-func (r *Reporter) SendReports(reports []TestJob) error {
+func (r *Reporter) SendReports(reports []Job) error {
 	defer func() { r.activeSenderDone <- true }() // decrement activeSenders
 
 	r.logger.Log("Sending " + strconv.Itoa(len(reports)) + " reports")

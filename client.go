@@ -150,14 +150,14 @@ func (c *APIClient) Beacon() (interface{}, error) {
 }
 
 // http://codefol.io/posts/How-Does-Rack-Parse-Query-Params-With-parse-nested-query
-func (c *APIClient) UpdateTestJobs(testJobs []TestJob) (interface{}, error) {
+func (c *APIClient) UpdateTestJobs(jobs []Job) (interface{}, error) {
 	form := url.Values{}
-	for _, job := range testJobs {
+	for _, job := range jobs {
 		jobData, err := json.Marshal(job)
 		if err != nil {
 			return new(interface{}), err
 		}
-		form.Add("jobs["+strconv.Itoa(job.Id)+"]", string(jobData))
+		form.Add("jobs["+job.GetId()+"]", string(jobData))
 	}
 
 	return c.PerformRequest("PATCH", "test_jobs/batch_update", form.Encode())

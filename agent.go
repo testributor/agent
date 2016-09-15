@@ -42,8 +42,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	jobsChannel := make(chan *TestJob)
-	reportsChannel := make(chan *TestJob)
+	jobsChannel := make(chan Job)
+	reportsChannel := make(chan Job)
 	cancelledTestRunIdsChan := make(chan []int)
 
 	manager := NewManager(jobsChannel, cancelledTestRunIdsChan)

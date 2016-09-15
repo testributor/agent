@@ -6,8 +6,8 @@ import (
 )
 
 type Worker struct {
-	jobsChannel         chan *TestJob
-	reportsChannel      chan *TestJob
+	jobsChannel         chan Job
+	reportsChannel      chan Job
 	workerIdlingChannel chan bool
 	logger              Logger
 	client              *APIClient
@@ -17,7 +17,7 @@ type Worker struct {
 
 // NewWorker should be used to create a Worker instances. It ensures the correct
 // initialization of all fields.
-func NewWorker(jobsChannel chan *TestJob, reportsChannel chan *TestJob, workerIdlingChannel chan bool, project *Project) *Worker {
+func NewWorker(jobsChannel chan Job, reportsChannel chan Job, workerIdlingChannel chan bool, project *Project) *Worker {
 	logger := Logger{"Worker", os.Stdout}
 	return &Worker{
 		jobsChannel:         jobsChannel,
@@ -40,13 +40,13 @@ func (w *Worker) Start() {
 func (w *Worker) RunJob() {
 	nextJob := <-w.jobsChannel
 
-	if w.lastTestRunId != nextJob.TestRunId {
-		w.project.SetupTestEnvironment(nextJob.CommitSha, w.logger)
+	if w.lastTestRunId != nextJob.GetTestRunId() {
+		w.project.SetupTestEnvironment(nextJob.GetCommitSha(), w.logger)
 	}
 
 	nextJob.Run(w.logger)
 
-	w.lastTestRunId = nextJob.TestRunId
+	w.lastTestRunId = nextJob.GetTestRunId()
 
 	// Inform manager that we are done in order to set
 	// workerCurrentJobCostPredictionSeconds back to zero

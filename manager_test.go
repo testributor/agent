@@ -11,15 +11,14 @@ func TestAssignJobToWorkerWhenNonEmpty(t *testing.T) {
 	expectedJob := TestJob{Id: 1, CostPredictionSeconds: 4,
 		SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()}
 
-	manager.jobs = []TestJob{
-		expectedJob,
-		TestJob{Id: 2, CostPredictionSeconds: 1,
+	manager.jobs = append(manager.jobs, &expectedJob,
+		&TestJob{Id: 2, CostPredictionSeconds: 1,
 			SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
-		TestJob{Id: 3, CostPredictionSeconds: 2,
+		&TestJob{Id: 3, CostPredictionSeconds: 2,
 			SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
-		TestJob{Id: 4, CostPredictionSeconds: 3,
+		&TestJob{Id: 4, CostPredictionSeconds: 3,
 			SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
-	}
+	)
 
 	oldJobs := len(manager.jobs)
 	assigned := manager.AssignJobToWorker()
@@ -39,7 +38,7 @@ func TestAssignJobToWorkerWhenNonEmpty(t *testing.T) {
 
 func TestAssignJobToWorkerWhenEmpty(t *testing.T) {
 	manager := Manager{}
-	manager.jobs = []TestJob{}
+	manager.jobs = []Job{}
 
 	oldJobs := len(manager.jobs)
 	assigned := manager.AssignJobToWorker()
@@ -55,12 +54,12 @@ func TestAssignJobToWorkerWhenEmpty(t *testing.T) {
 func TestTotalWorkloadInQueueSeconds(t *testing.T) {
 	manager := Manager{
 		workerCurrentJobCostPredictionSeconds: 1,
-		jobs: []TestJob{
-			TestJob{Id: 2, CostPredictionSeconds: 2,
+		jobs: []Job{
+			&TestJob{Id: 2, CostPredictionSeconds: 2,
 				SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
-			TestJob{Id: 3, CostPredictionSeconds: 10,
+			&TestJob{Id: 3, CostPredictionSeconds: 10,
 				SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
-			TestJob{Id: 4, CostPredictionSeconds: 100,
+			&TestJob{Id: 4, CostPredictionSeconds: 100,
 				SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
 		},
 	}
@@ -75,12 +74,12 @@ func TestTotalWorkloadInQueueSeconds(t *testing.T) {
 func TestLowWorkload(t *testing.T) {
 	manager := Manager{
 		workerCurrentJobCostPredictionSeconds: 1,
-		jobs: []TestJob{
-			TestJob{Id: 2, CostPredictionSeconds: 1,
+		jobs: []Job{
+			&TestJob{Id: 2, CostPredictionSeconds: 1,
 				SentAtSecondsSinceEpoch: 2, CreatedAt: time.Now()},
-			TestJob{Id: 3, CostPredictionSeconds: 2,
+			&TestJob{Id: 3, CostPredictionSeconds: 2,
 				SentAtSecondsSinceEpoch: 10, CreatedAt: time.Now()},
-			TestJob{Id: 4, CostPredictionSeconds: 3,
+			&TestJob{Id: 4, CostPredictionSeconds: 3,
 				SentAtSecondsSinceEpoch: 100, CreatedAt: time.Now()},
 		},
 	}
@@ -91,11 +90,11 @@ func TestLowWorkload(t *testing.T) {
 }
 
 func TestParseChannelsWhenNoJobExists(t *testing.T) {
-	newJobsChannel := make(chan []TestJob)
-	manager := Manager{jobs: []TestJob{}, newJobsChannel: newJobsChannel}
+	newJobsChannel := make(chan []Job)
+	manager := Manager{jobs: []Job{}, newJobsChannel: newJobsChannel}
 	go func() {
-		manager.newJobsChannel <- []TestJob{
-			TestJob{},
+		manager.newJobsChannel <- []Job{
+			&TestJob{},
 		}
 	}()
 
@@ -109,16 +108,16 @@ func TestParseChannelsWhenNoJobExists(t *testing.T) {
 }
 
 func TestParseChannelsWhenJobsExists(t *testing.T) {
-	jobsChannel := make(chan *TestJob)
-	newJobsChannel := make(chan []TestJob)
-	var newJob *TestJob
+	jobsChannel := make(chan Job)
+	newJobsChannel := make(chan []Job)
+	var newJob Job
 
 	manager := Manager{
-		jobs: []TestJob{
+		jobs: []Job{
 			// Keep the cost predicton big enough to avoid a call to FetchJobs
-			TestJob{Id: 2, CostPredictionSeconds: 100,
+			&TestJob{Id: 2, CostPredictionSeconds: 100,
 				SentAtSecondsSinceEpoch: 2, CreatedAt: time.Now()},
-			TestJob{Id: 3, CostPredictionSeconds: 200,
+			&TestJob{Id: 3, CostPredictionSeconds: 200,
 				SentAtSecondsSinceEpoch: 10, CreatedAt: time.Now()},
 		},
 		jobsChannel:    jobsChannel,
@@ -142,8 +141,8 @@ func TestParseChannelsWhenJobsExists(t *testing.T) {
 	}
 
 	go func() {
-		manager.newJobsChannel <- []TestJob{
-			TestJob{},
+		manager.newJobsChannel <- []Job{
+			&TestJob{},
 		}
 	}()
 	oldJobs = len(manager.jobs)
@@ -157,7 +156,7 @@ func TestParseChannelsWhenWorkerIsIdlingAndThereAreNoJobs(t *testing.T) {
 	workerIdlingChannel := make(chan bool)
 
 	manager := Manager{
-		jobs:                                  []TestJob{},
+		jobs:                                  []Job{},
 		workerIdlingChannel:                   workerIdlingChannel,
 		workerCurrentJobCostPredictionSeconds: 1000,
 	}
@@ -178,8 +177,8 @@ func TestParseChannelsWhenWorkerIsIdlingAndThereAreJobs(t *testing.T) {
 	workerIdlingChannel := make(chan bool)
 
 	manager := Manager{
-		jobs: []TestJob{
-			TestJob{},
+		jobs: []Job{
+			&TestJob{},
 		},
 		workerIdlingChannel:                   workerIdlingChannel,
 		workerCurrentJobCostPredictionSeconds: 1000,
@@ -206,14 +205,14 @@ func TestCancelTestRuns(t *testing.T) {
 	job4 := TestJob{Id: 4, TestRunId: 1234}
 
 	manager := Manager{
-		jobs: []TestJob{job1, job2, job3, job4},
+		jobs: []Job{&job1, &job2, &job3, &job4},
 		cancelledTestRunIdsChan: cancelledTestRunIdsChan,
 		logger:                  Logger{"Manager", ioutil.Discard},
 	}
 
 	manager.CancelTestRuns([]int{1234})
 
-	if len(manager.jobs) != 2 || manager.jobs[0] != job2 || manager.jobs[1] != job3 {
+	if len(manager.jobs) != 2 || (*manager.jobs[0].(*TestJob)) != job2 || (*manager.jobs[1].(*TestJob)) != job3 {
 		t.Error("It should remove cancelled builds from the jobs slice")
 	}
 }
@@ -227,7 +226,7 @@ func TestCancelTestRunsThroughParseChannels(t *testing.T) {
 	job4 := TestJob{Id: 4, TestRunId: 1234}
 
 	manager := Manager{
-		jobs: []TestJob{job1, job2, job3, job4},
+		jobs: []Job{&job1, &job2, &job3, &job4},
 		cancelledTestRunIdsChan: cancelledTestRunIdsChan,
 		logger:                  Logger{"Manager", ioutil.Discard},
 	}
@@ -238,7 +237,7 @@ func TestCancelTestRunsThroughParseChannels(t *testing.T) {
 
 	manager.ParseChannels()
 
-	if len(manager.jobs) != 2 || manager.jobs[0] != job2 || manager.jobs[1] != job3 {
+	if len(manager.jobs) != 2 || (*manager.jobs[0].(*TestJob)) != job2 || (*manager.jobs[1].(*TestJob)) != job3 {
 		t.Error("It should remove cancelled builds from the jobs slice")
 	}
 }

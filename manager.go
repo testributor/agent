@@ -14,11 +14,11 @@ const (
 )
 
 type Manager struct {
-	jobsChannel                           chan *TestJob
-	newJobsChannel                        chan []TestJob // TODO: Make this a pointer to slice?
+	jobsChannel                           chan Job
+	newJobsChannel                        chan []Job
 	cancelledTestRunIdsChan               chan []int
 	workerIdlingChannel                   chan bool
-	jobs                                  []TestJob
+	jobs                                  []Job
 	workerCurrentJobCostPredictionSeconds float64
 	workerCurrentJobStartedAt             time.Time
 	logger                                Logger
@@ -27,12 +27,12 @@ type Manager struct {
 
 // NewManager should be used to create a Manager instances. It ensures the correct
 // initialization of all fields.
-func NewManager(jobsChannel chan *TestJob, cancelledTestRunIdsChan chan []int) *Manager {
+func NewManager(jobsChannel chan Job, cancelledTestRunIdsChan chan []int) *Manager {
 	logger := Logger{"Manager", os.Stdout}
 	return &Manager{
 		jobsChannel:             jobsChannel,
 		cancelledTestRunIdsChan: cancelledTestRunIdsChan,
-		newJobsChannel:          make(chan []TestJob),
+		newJobsChannel:          make(chan []Job),
 		workerIdlingChannel:     make(chan bool),
 		logger:                  logger,
 		client:                  NewClient(logger),
@@ -49,7 +49,7 @@ func (m *Manager) FetchJobs() {
 	if err != nil {
 		panic("Tried to fetch some jobs but there was an error: " + err.Error())
 	}
-	var jobs = make([]TestJob, 0, 10)
+	var jobs = make([]Job, 0, 10)
 	for _, job := range result.([]interface{}) {
 		testJob := NewTestJob(job.(map[string]interface{}))
 		testJob.QueuedAtSecondsSinceEpoch = time.Now().Unix()
@@ -107,7 +107,7 @@ func (m *Manager) TotalWorkloadInQueueSeconds() float64 {
 	totalWorkload := float64(0)
 
 	for _, job := range m.jobs {
-		totalWorkload += job.CostPredictionSeconds
+		totalWorkload += job.GetCostPredictionSeconds()
 	}
 
 	totalWorkload += m.workloadOnWorkerSeconds()
@@ -127,10 +127,10 @@ func (m *Manager) LowWorkload() bool {
 func (m *Manager) AssignJobToWorker() bool {
 	if length := len(m.jobs); length > 0 {
 		jobToBeAssigned := m.jobs[0]
-		m.workerCurrentJobCostPredictionSeconds = jobToBeAssigned.CostPredictionSeconds
+		m.workerCurrentJobCostPredictionSeconds = jobToBeAssigned.GetCostPredictionSeconds()
 		m.workerCurrentJobStartedAt = time.Now()
 
-		newJobsList := make([]TestJob, len(m.jobs)-1)
+		newJobsList := make([]Job, len(m.jobs)-1)
 		copy(newJobsList, m.jobs[1:])
 		m.jobs = newJobsList
 
@@ -145,12 +145,12 @@ func (m *Manager) CancelTestRuns(ids []int) {
 		return
 	}
 
-	newJobsList := []TestJob{}
+	newJobsList := []Job{}
 	// Uniq set implemented as a map (http://stackoverflow.com/a/9251352)
 	cancelledIdsSet := make(map[string]struct{})
 	for _, job := range m.jobs {
 		for _, id := range ids {
-			if job.TestRunId == id {
+			if job.GetTestRunId() == id {
 				cancelledIdsSet[strconv.Itoa(id)] = struct{}{}
 			} else {
 				newJobsList = append(newJobsList, job)
@@ -170,7 +170,7 @@ func (m *Manager) CancelTestRuns(ids []int) {
 }
 
 func (m *Manager) ParseChannels() {
-	var newJobs []TestJob
+	var newJobs []Job
 
 	// TODO: These two selects need DRYing
 	if len(m.jobs) > 0 {
@@ -182,7 +182,7 @@ func (m *Manager) ParseChannels() {
 			m.workerCurrentJobCostPredictionSeconds = 0
 		case cancelledIds := <-m.cancelledTestRunIdsChan:
 			m.CancelTestRuns(cancelledIds)
-		case m.jobsChannel <- &m.jobs[0]:
+		case m.jobsChannel <- m.jobs[0]:
 			m.AssignJobToWorker()
 		}
 	} else {

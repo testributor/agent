@@ -86,7 +86,7 @@ func (builder *TestJobBuilder) sentAtSecondsSinceEpoch() int64 {
 }
 
 // NewTestJob is used to create a TestJob from the API response
-func NewTestJob(jobData map[string]interface{}) TestJob {
+func NewTestJob(jobData map[string]interface{}) *TestJob {
 	builder := TestJobBuilder(jobData)
 
 	testJob := TestJob{
@@ -99,7 +99,23 @@ func NewTestJob(jobData map[string]interface{}) TestJob {
 		Command:                 builder.command(),
 	}
 
-	return testJob
+	return &testJob
+}
+
+func (testJob *TestJob) GetCostPredictionSeconds() float64 {
+	return testJob.CostPredictionSeconds
+}
+
+func (testJob *TestJob) GetTestRunId() int {
+	return testJob.TestRunId
+}
+
+func (testJob *TestJob) GetId() string {
+	return strconv.Itoa(testJob.Id)
+}
+
+func (testJob *TestJob) GetCommitSha() string {
+	return testJob.CommitSha
 }
 
 func (testJob *TestJob) Run(logger Logger) {

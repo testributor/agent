@@ -6,4 +6,5 @@ type Job interface {
 	GetTestRunId() int
 	GetId() string
 	GetCommitSha() string
+	SetQueuedAtSecondsSinceEpoch(int64)
 }

@@ -6,10 +6,6 @@ import (
 	"time"
 )
 
-const (
-	NO_PREDICTION_WORKLOAD_SECONDS = 999999999
-)
-
 type TestJob struct {
 	Id                         int       `json:"id"`
 	CostPredictionSeconds      float64   `json:"cost_prediction_seconds"`
@@ -26,7 +22,7 @@ type TestJob struct {
 	CommitSha                  string
 }
 
-// This is a custom type based on the type return my APIClient's FetchJobs
+// This is a custom type which handles the result of APIClient's FetchJobs
 // function. We add methods on this type to parse the various fields and return
 // them in a format suitable for TestJob fields.
 type TestJobBuilder map[string]interface{}
@@ -116,6 +112,10 @@ func (testJob *TestJob) GetId() string {
 
 func (testJob *TestJob) GetCommitSha() string {
 	return testJob.CommitSha
+}
+
+func (testJob *TestJob) SetQueuedAtSecondsSinceEpoch(timestamp int64) {
+	testJob.QueuedAtSecondsSinceEpoch = timestamp
 }
 
 func (testJob *TestJob) Run(logger Logger) {

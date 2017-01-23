@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var FetchJobsAPIResponse []byte = []byte(`
+var FetchJobsTestJobsResponse []byte = []byte(`
 [{
   "command":"bin/rails runner -e test '$LOAD_PATH.push(\"#{Rails.root}/test\"); require \"test/controllers/dashboard_controller_test.rb\".gsub(/^test\\//,\"\")'",
   "created_at":"2016-07-09T09:03:05.717Z",
@@ -35,14 +35,14 @@ var FetchJobsAPIResponse []byte = []byte(`
 
 func prepareTestJobBuilder() TestJobBuilder {
 	var parsedResponse interface{}
-	_ = json.Unmarshal(FetchJobsAPIResponse, &parsedResponse)
+	_ = json.Unmarshal(FetchJobsTestJobsResponse, &parsedResponse)
 
 	return TestJobBuilder(parsedResponse.([]interface{})[0].(map[string]interface{}))
 }
 
 func prepareNoPredictionTestJobBuilder() TestJobBuilder {
 	var parsedResponse interface{}
-	_ = json.Unmarshal(FetchJobsAPIResponse, &parsedResponse)
+	_ = json.Unmarshal(FetchJobsTestJobsResponse, &parsedResponse)
 
 	return TestJobBuilder(parsedResponse.([]interface{})[1].(map[string]interface{}))
 }
@@ -102,7 +102,7 @@ func TestBuilderCommitSha(t *testing.T) {
 	builder := prepareTestJobBuilder()
 
 	if builder.commitSha() != "f151713e400ac3d8dc1291fe21a413a6f813072d" {
-		t.Error("It should return f151713e400ac3d8dc1291fe21a413a6f813072d but got: ", builder.testRunId())
+		t.Error("It should return f151713e400ac3d8dc1291fe21a413a6f813072d but got: ", builder.commitSha())
 	}
 }
 

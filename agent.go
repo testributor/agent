@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+const (
+	NO_PREDICTION_WORKLOAD_SECONDS = 999999999
+)
+
 var WorkerUUID string
 var WorkerUUIDShort string
 

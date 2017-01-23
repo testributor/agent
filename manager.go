@@ -50,10 +50,15 @@ func (m *Manager) FetchJobs() {
 		panic("Tried to fetch some jobs but there was an error: " + err.Error())
 	}
 	var jobs = make([]Job, 0, 10)
-	for _, job := range result.([]interface{}) {
-		testJob := NewTestJob(job.(map[string]interface{}))
-		testJob.QueuedAtSecondsSinceEpoch = time.Now().Unix()
-		jobs = append(jobs, testJob)
+	switch v := result.(type) {
+	case []interface{}:
+		for _, job := range v {
+			newJob := NewTestJob(job.(map[string]interface{}))
+			newJob.SetQueuedAtSecondsSinceEpoch(time.Now().Unix())
+			jobs = append(jobs, newJob)
+		}
+	case map[string]interface{}:
+		jobs = append(jobs, NewSetupJob(v))
 	}
 
 	if len(jobs) > 0 {

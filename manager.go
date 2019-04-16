@@ -145,7 +145,7 @@ func (m *Manager) CancelTestRuns(ids []int) {
 		return
 	}
 
-	newJobsList := []TestJob{}
+	var newJobsList []TestJob
 	// Uniq set implemented as a map (http://stackoverflow.com/a/9251352)
 	cancelledIdsSet := make(map[string]struct{})
 	for _, job := range m.jobs {

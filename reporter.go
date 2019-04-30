@@ -105,7 +105,7 @@ func (r *Reporter) SendReports(reports []TestJob) error {
 }
 
 func (r *Reporter) deleteTestRunIds(response interface{}) []int {
-	deleteTestRunIds := []int{}
+	var deleteTestRunIds []int
 	for _, id := range response.(map[string]interface{})["delete_test_runs"].([]interface{}) {
 		deleteTestRunIds = append(deleteTestRunIds, int(id.(float64)))
 	}

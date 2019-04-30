@@ -467,7 +467,7 @@ func (project *Project) PrepareBashFunctionsAndVariables(buildCommandVariables m
 		vars += k + "=" + v + "\n"
 	}
 
-	commands := []byte{}
+	var commands []byte
 	if fileInfo, err := os.Stat(BUILD_COMMANDS_PATH); err == nil && !fileInfo.IsDir() {
 		commands, err = ioutil.ReadFile(BUILD_COMMANDS_PATH)
 		if err != nil {
